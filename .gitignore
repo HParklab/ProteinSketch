@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+outputs/
+schedules/
+examples/
+!examples/
+!examples/*.sh
+.DS_Store

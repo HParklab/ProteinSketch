@@ -1,0 +1,4143 @@
+diff --git a/config/inference/base.yaml b/config/inference/base.yaml
+index 686e71b..57a250a 100644
+--- a/config/inference/base.yaml
++++ b/config/inference/base.yaml
+@@ -24,6 +24,14 @@ inference:
+   model_directory_path: null
+   cyclic: False 
+   cyc_chains: 'a'
++  sketch_json: null
++  sketch_json_volume_index: 0
++  sketch_json_mode: null
++  volume_sketch_cutoff: null
++  volume_sketch_max_sdf: 0.0
++  volume_sketch_hotspot: True
++  write_volume_sketch_points: False
++  volume_sketch_points_path: null
+ 
+ contigmap:
+   contigs: null
+@@ -103,6 +111,15 @@ potentials:
+   guiding_potentials: null 
+   guide_scale: 10
+   guide_decay: constant
++  embedding_guidance: False
++  embedding_guidance_alpha: 0.01
++  embedding_guidance_steps: 1
++  embedding_guidance_persist: True
++  embedding_guidance_use_decay: True
++  embedding_guidance_normalize: True
++  embedding_guidance_update_msa: True
++  embedding_guidance_update_pair: True
++  embedding_guidance_update_state: True
+   olig_inter_all : null
+   olig_intra_all : null
+   olig_custom_contact : null
+diff --git a/config/inference/oneshot.yaml b/config/inference/oneshot.yaml
+new file mode 100644
+index 0000000..ee94aab
+--- /dev/null
++++ b/config/inference/oneshot.yaml
+@@ -0,0 +1,157 @@
++# One shot inference Configuration.
++
++inference:
++  input_pdb: null
++  num_designs: 1
++  design_startnum: 0
++  ckpt_override_path: null
++  symmetry: null
++  recenter: True
++  radius: 10.0
++  model_only_neighbors: False
++  output_prefix: null
++  write_trajectory: False
++  empty_cache_per_design: False
++  scaffold_guided: False
++  model_runner: OneShotSampler
++  cautious: False
++  align_motif: True
++  symmetric_self_cond: True
++  final_step: 1
++  deterministic: False
++  trb_save_ckpt_path: null
++  schedule_directory_path: null
++  model_directory_path: null
++  cyclic: False
++  cyc_chains: 'a'
++  sketch_json: null
++  sketch_json_volume_index: 0
++  sketch_json_mode: null
++  volume_sketch_cutoff: null
++  volume_sketch_max_sdf: 0.0
++  volume_sketch_hotspot: True
++  write_volume_sketch_points: False
++  volume_sketch_points_path: null
++
++contigmap:
++  contigs: null
++  inpaint_seq: null
++  inpaint_str: null
++  provide_seq: null
++  length: null
++
++model:
++  n_extra_block: 4
++  n_main_block: 32
++  n_ref_block: 4
++  d_msa: 256
++  d_msa_full: 64
++  d_pair: 128
++  d_templ: 64
++  n_head_msa: 8
++  n_head_pair: 4
++  n_head_templ: 4
++  d_hidden: 32
++  d_hidden_templ: 32
++  p_drop: 0.15
++  SE3_param_full:
++    num_layers: 1
++    num_channels: 32
++    num_degrees: 2
++    n_heads: 4
++    div: 4
++    l0_in_features: 8
++    l0_out_features: 8
++    l1_in_features: 3
++    l1_out_features: 2
++    num_edge_features: 32
++  SE3_param_topk:
++    num_layers: 1
++    num_channels: 32
++    num_degrees: 2
++    n_heads: 4
++    div: 4
++    l0_in_features: 64
++    l0_out_features: 64
++    l1_in_features: 3
++    l1_out_features: 2
++    num_edge_features: 64
++  freeze_track_motif: False
++  use_motif_timestep: False
++
++diffuser:
++  T: 50
++  b_0: 1e-2
++  b_T: 7e-2
++  schedule_type: linear
++  so3_type: igso3
++  crd_scale: 0.25
++  partial_T: 7
++  so3_schedule_type: linear
++  min_b: 1.5
++  max_b: 2.5
++  min_sigma: 0.02
++  max_sigma: 1.5
++
++denoiser:
++  noise_scale_ca: 1
++  final_noise_scale_ca: 1
++  ca_noise_schedule_type: constant
++  noise_scale_frame: 1
++  final_noise_scale_frame: 1
++  frame_noise_schedule_type: constant
++
++ppi:
++  hotspot_res: null
++
++potentials:
++  guiding_potentials: null
++  guide_scale: 10
++  guide_decay: constant
++  embedding_guidance: False
++  embedding_guidance_alpha: 0.01
++  embedding_guidance_steps: 1
++  embedding_guidance_persist: True
++  embedding_guidance_use_decay: True
++  embedding_guidance_normalize: True
++  embedding_guidance_update_msa: True
++  embedding_guidance_update_pair: True
++  embedding_guidance_update_state: True
++  olig_inter_all : null
++  olig_intra_all : null
++  olig_custom_contact : null
++  substrate: null
++
++contig_settings:
++  ref_idx: null
++  hal_idx: null
++  idx_rf: null
++  inpaint_seq_tensor: null
++
++preprocess:
++  sidechain_input: False
++  motif_sidechain_input: True
++  d_t1d: 22
++  d_t2d: 44
++  prob_self_cond: 0.0
++  str_self_cond: False
++  predict_previous: False
++
++logging:
++  inputs: False
++
++scaffoldguided:
++  scaffoldguided: False
++  target_pdb: False
++  target_path: null
++  scaffold_list: null
++  scaffold_dir: null
++  sampled_insertion: 0
++  sampled_N: 0
++  sampled_C: 0
++  ss_mask: 0
++  systematic: False
++  target_ss: null
++  target_adj: null
++  mask_loops: True
++  contig_crop: null
+diff --git a/config/inference/voxel.yaml b/config/inference/voxel.yaml
+new file mode 100644
+index 0000000..0233487
+--- /dev/null
++++ b/config/inference/voxel.yaml
+@@ -0,0 +1,160 @@
++# Base inference Configuration.
++
++inference:
++  input_pdb: null
++  num_designs: 10
++  design_startnum: 0
++  ckpt_override_path: null
++  symmetry: null
++  recenter: True
++  radius: 10.0
++  model_only_neighbors: False
++  output_prefix: samples/design
++  write_trajectory: True
++  empty_cache_per_design: False
++  scaffold_guided: False
++  model_runner: VoxelSampler
++  cautious: True
++  align_motif: True
++  symmetric_self_cond: True
++  final_step: 1
++  deterministic: False
++  trb_save_ckpt_path: null
++  schedule_directory_path: null
++  model_directory_path: null
++  cyclic: False
++  cyc_chains: 'a'
++  sketch_json: null
++  sketch_json_volume_index: 0
++  sketch_json_mode: null
++  volume_sketch_cutoff: null
++  volume_sketch_max_sdf: 0.0
++  volume_sketch_hotspot: True
++  write_volume_sketch_points: False
++  volume_sketch_points_path: null
++
++contigmap:
++  contigs: null
++  inpaint_seq: null
++  inpaint_str: null
++  inpaint_str_helix: null
++  inpaint_str_strand: null
++  inpaint_str_loop: null
++  provide_seq: null
++  length: null
++
++model:
++  n_extra_block: 4
++  n_main_block: 32
++  n_ref_block: 4
++  d_msa: 256
++  d_msa_full: 64
++  d_pair: 128
++  d_templ: 64
++  n_head_msa: 8
++  n_head_pair: 4
++  n_head_templ: 4
++  d_hidden: 32
++  d_hidden_templ: 32
++  p_drop: 0.15
++  SE3_param_full:
++    num_layers: 1
++    num_channels: 32
++    num_degrees: 2
++    n_heads: 4
++    div: 4
++    l0_in_features: 8
++    l0_out_features: 8
++    l1_in_features: 3
++    l1_out_features: 2
++    num_edge_features: 32
++  SE3_param_topk:
++    num_layers: 1
++    num_channels: 32
++    num_degrees: 2
++    n_heads: 4
++    div: 4
++    l0_in_features: 64
++    l0_out_features: 64
++    l1_in_features: 3
++    l1_out_features: 2
++    num_edge_features: 64
++  freeze_track_motif: False
++  use_motif_timestep: False
++
++diffuser:
++  T: 50
++  b_0: 1e-2
++  b_T: 7e-2
++  schedule_type: linear
++  so3_type: igso3
++  crd_scale: 0.25
++  partial_T: null
++  so3_schedule_type: linear
++  min_b: 1.5
++  max_b: 2.5
++  min_sigma: 0.02
++  max_sigma: 1.5
++
++denoiser:
++  noise_scale_ca: 1
++  final_noise_scale_ca: 1
++  ca_noise_schedule_type: constant
++  noise_scale_frame: 1
++  final_noise_scale_frame: 1
++  frame_noise_schedule_type: constant
++
++ppi:
++  hotspot_res: null
++
++potentials:
++  guiding_potentials: null
++  guide_scale: 10
++  guide_decay: linear
++  embedding_guidance: False
++  embedding_guidance_alpha: 0.01
++  embedding_guidance_steps: 1
++  embedding_guidance_persist: True
++  embedding_guidance_use_decay: True
++  embedding_guidance_normalize: True
++  embedding_guidance_update_msa: True
++  embedding_guidance_update_pair: True
++  embedding_guidance_update_state: True
++  olig_inter_all : null
++  olig_intra_all : null
++  olig_custom_contact : null
++  substrate: null
++
++contig_settings:
++  ref_idx: null
++  hal_idx: null
++  idx_rf: null
++  inpaint_seq_tensor: null
++
++preprocess:
++  sidechain_input: False
++  motif_sidechain_input: True
++  d_t1d: 22
++  d_t2d: 44
++  prob_self_cond: 0.0
++  str_self_cond: False
++  predict_previous: False
++
++logging:
++  inputs: False
++
++scaffoldguided:
++  scaffoldguided: False
++  target_pdb: False
++  target_path: null
++  scaffold_list: null
++  scaffold_dir: null
++  sampled_insertion: 0
++  sampled_N: 0
++  sampled_C: 0
++  ss_mask: 0
++  systematic: False
++  target_ss: null
++  target_adj: null
++  mask_loops: True
++  contig_crop: null
+diff --git a/env/SE3nv.yml b/env/SE3nv.yml
+index a51bcce..8c57530 100644
+--- a/env/SE3nv.yml
++++ b/env/SE3nv.yml
+@@ -1,4 +1,4 @@
+-name: SE3nv
++name: SE3nv_2
+ channels:
+   - defaults
+   - conda-forge
+diff --git a/rfdiffusion/RoseTTAFoldModel.py b/rfdiffusion/RoseTTAFoldModel.py
+index dcf1a10..d671098 100644
+--- a/rfdiffusion/RoseTTAFoldModel.py
++++ b/rfdiffusion/RoseTTAFoldModel.py
+@@ -65,13 +65,11 @@ class RoseTTAFoldModule(nn.Module):
+        
+         self.exp_pred = ExpResolvedNetwork(d_msa, d_state)
+ 
+-    def forward(self, msa_latent, msa_full, seq, xyz, idx, t,
+-                t1d=None, t2d=None, xyz_t=None, alpha_t=None,
+-                msa_prev=None, pair_prev=None, state_prev=None,
+-                return_raw=False, return_full=False, return_infer=False,
+-                use_checkpoint=False, motif_mask=None, i_cycle=None, n_cycle=None,
+-                cyclic_reses=None):
+-
++    def embed_inputs(self, msa_latent, msa_full, seq, xyz, idx, t,
++                     t1d=None, t2d=None, xyz_t=None, alpha_t=None,
++                     msa_prev=None, pair_prev=None, state_prev=None,
++                     use_checkpoint=False, motif_mask=None,
++                     cyclic_reses=None):
+         B, N, L = msa_latent.shape[:3]
+         # Get embeddings
+         msa_latent, pair, state = self.latent_emb(msa_latent, seq, idx, cyclic_reses)
+@@ -97,7 +95,14 @@ class RoseTTAFoldModule(nn.Module):
+ 
+         # add template embedding
+         pair, state = self.templ_emb(t1d, t2d, alpha_t, xyz_t, pair, state, use_checkpoint=use_checkpoint)
+-        
++
++        return msa_latent, msa_full, pair, state
++
++    def forward_from_embeddings(self, seq, xyz, idx,
++                                msa_latent, msa_full, pair, state,
++                                return_raw=False, return_infer=False,
++                                use_checkpoint=False, motif_mask=None,
++                                cyclic_reses=None):
+         # Predict coordinates from given inputs
+         is_frozen_residue = motif_mask if self.freeze_track_motif else torch.zeros_like(motif_mask).bool()
+         msa, pair, R, T, alpha_s, state = self.simulator(seq, msa_latent, msa_full, pair, xyz[:,:,:3],
+@@ -139,3 +144,44 @@ class RoseTTAFoldModule(nn.Module):
+         xyz = einsum('rbnij,bnaj->rbnai', R, xyz[:,:,:3]-xyz[:,:,1].unsqueeze(-2)) + T.unsqueeze(-2)
+ 
+         return logits, logits_aa, logits_exp, xyz, alpha_s, lddt
++
++    def forward(self, msa_latent, msa_full, seq, xyz, idx, t,
++                t1d=None, t2d=None, xyz_t=None, alpha_t=None,
++                msa_prev=None, pair_prev=None, state_prev=None,
++                return_raw=False, return_full=False, return_infer=False,
++                use_checkpoint=False, motif_mask=None, i_cycle=None, n_cycle=None,
++                cyclic_reses=None):
++
++        msa_latent, msa_full, pair, state = self.embed_inputs(
++            msa_latent,
++            msa_full,
++            seq,
++            xyz,
++            idx,
++            t,
++            t1d=t1d,
++            t2d=t2d,
++            xyz_t=xyz_t,
++            alpha_t=alpha_t,
++            msa_prev=msa_prev,
++            pair_prev=pair_prev,
++            state_prev=state_prev,
++            use_checkpoint=use_checkpoint,
++            motif_mask=motif_mask,
++            cyclic_reses=cyclic_reses,
++        )
++
++        return self.forward_from_embeddings(
++            seq,
++            xyz,
++            idx,
++            msa_latent,
++            msa_full,
++            pair,
++            state,
++            return_raw=return_raw,
++            return_infer=return_infer,
++            use_checkpoint=use_checkpoint,
++            motif_mask=motif_mask,
++            cyclic_reses=cyclic_reses,
++        )
+diff --git a/rfdiffusion/inference/model_runners.py b/rfdiffusion/inference/model_runners.py
+index 2bd0d53..2afc799 100644
+--- a/rfdiffusion/inference/model_runners.py
++++ b/rfdiffusion/inference/model_runners.py
+@@ -289,6 +289,11 @@ class Sampler:
+         )
+         return iu.Denoise(**denoise_kwargs)
+ 
++    def process_target_for_init(self):
++        return iu.process_target(
++            self.inf_conf.input_pdb, parse_hetatom=True, center=False
++        )
++
+     def sample_init(self, return_forward_trajectory=False):
+         """
+         Initial features to start the sampling process.
+@@ -305,9 +310,7 @@ class Sampler:
+         ### Parse input pdb ###
+         #######################
+ 
+-        self.target_feats = iu.process_target(
+-            self.inf_conf.input_pdb, parse_hetatom=True, center=False
+-        )
++        self.target_feats = self.process_target_for_init()
+ 
+         ################################
+         ### Generate specific contig ###
+@@ -489,6 +492,9 @@ class Sampler:
+         self.msa_prev = None
+         self.pair_prev = None
+         self.state_prev = None
++        self.embedding_guidance_msa_delta = None
++        self.embedding_guidance_pair_delta = None
++        self.embedding_guidance_state_delta = None
+ 
+         #########################################
+         ### Parse ligand for ligand potential ###
+@@ -800,6 +806,191 @@ class SelfConditioning(Sampler):
+     pX0[t+1] is provided as a template input to the model at time t
+     """
+ 
++    def _embedding_guidance_enabled(self):
++        return bool(self.potential_conf.get("embedding_guidance", False)) and (
++            self.potential_manager is not None
++        ) and (not self.potential_manager.is_empty())
++
++    def _embedding_guidance_value(self, key, default):
++        return self.potential_conf.get(key, default)
++
++    def _embedding_guidance_alpha(self, t):
++        alpha = float(self._embedding_guidance_value("embedding_guidance_alpha", 0.01))
++        if bool(self._embedding_guidance_value("embedding_guidance_use_decay", True)):
++            alpha *= float(self.potential_manager.get_guide_scale(t))
++        return alpha
++
++    def _normalized_embedding_step(self, emb, grad, step_size, residue_mask=None, pair_mask=None):
++        if grad is None:
++            return emb.detach()
++
++        grad = torch.nan_to_num(grad)
++        if residue_mask is not None:
++            grad = grad.clone()
++            grad[..., residue_mask, :] = 0
++        if pair_mask is not None:
++            grad = grad * pair_mask
++
++        if bool(self._embedding_guidance_value("embedding_guidance_normalize", True)):
++            grad = grad / (grad.square().mean().sqrt() + 1e-8)
++
++        return (emb + step_size * grad).detach()
++
++    def _embedding_guided_forward(
++        self,
++        *,
++        msa_masked,
++        msa_full,
++        seq_in,
++        xt_in,
++        idx_pdb,
++        t1d,
++        t2d,
++        xyz_t,
++        alpha_t,
++        t,
++    ):
++        motif_mask = self.diffusion_mask.squeeze().to(self.device)
++        fixed_residue_mask = motif_mask.bool()
++        free_residue_mask = ~fixed_residue_mask
++        pair_update_mask = (
++            (free_residue_mask[:, None] | free_residue_mask[None, :])
++            .to(self.device)
++            .reshape(1, fixed_residue_mask.shape[0], fixed_residue_mask.shape[0], 1)
++        )
++
++        msa_latent, msa_full_emb, pair, state = self.model.embed_inputs(
++            msa_masked,
++            msa_full,
++            seq_in,
++            xt_in,
++            idx_pdb,
++            torch.tensor(t, device=self.device),
++            t1d=t1d,
++            t2d=t2d,
++            xyz_t=xyz_t,
++            alpha_t=alpha_t,
++            msa_prev=None,
++            pair_prev=None,
++            state_prev=None,
++            motif_mask=motif_mask,
++            cyclic_reses=self.cyclic_reses,
++        )
++
++        msa_full_emb = msa_full_emb.detach()
++        base_msa_latent = msa_latent.detach()
++        base_pair = pair.detach()
++        base_state = state.detach()
++
++        if bool(self._embedding_guidance_value("embedding_guidance_persist", True)):
++            if (
++                self.embedding_guidance_msa_delta is not None
++                and self.embedding_guidance_msa_delta.shape == msa_latent.shape
++            ):
++                msa_latent = msa_latent + self.embedding_guidance_msa_delta.to(msa_latent.device)
++            if (
++                self.embedding_guidance_pair_delta is not None
++                and self.embedding_guidance_pair_delta.shape == pair.shape
++            ):
++                pair = pair + self.embedding_guidance_pair_delta.to(pair.device)
++            if (
++                self.embedding_guidance_state_delta is not None
++                and self.embedding_guidance_state_delta.shape == state.shape
++            ):
++                state = state + self.embedding_guidance_state_delta.to(state.device)
++
++        update_msa = bool(self._embedding_guidance_value("embedding_guidance_update_msa", True))
++        update_pair = bool(self._embedding_guidance_value("embedding_guidance_update_pair", True))
++        update_state = bool(self._embedding_guidance_value("embedding_guidance_update_state", True))
++        n_steps = int(self._embedding_guidance_value("embedding_guidance_steps", 1))
++        n_steps = max(n_steps, 1)
++
++        for _ in range(n_steps):
++            msa_latent = msa_latent.detach().requires_grad_(update_msa)
++            pair = pair.detach().requires_grad_(update_pair)
++            state = state.detach().requires_grad_(update_state)
++
++            _, _, px0, _, alpha, _, plddt = self.model.forward_from_embeddings(
++                seq_in,
++                xt_in,
++                idx_pdb,
++                msa_latent,
++                msa_full_emb,
++                pair,
++                state,
++                return_infer=True,
++                motif_mask=motif_mask,
++                cyclic_reses=self.cyclic_reses,
++            )
++
++            _, px0_aa = self.allatom(torch.argmax(seq_in, dim=-1), px0, alpha)
++            px0_aa = px0_aa.squeeze()[:, :14]
++            reward = self.potential_manager.compute_all_potentials(px0_aa)
++
++            grad_targets = []
++            grad_names = []
++            if update_msa:
++                grad_targets.append(msa_latent)
++                grad_names.append("msa")
++            if update_pair:
++                grad_targets.append(pair)
++                grad_names.append("pair")
++            if update_state:
++                grad_targets.append(state)
++                grad_names.append("state")
++
++            if not grad_targets or not reward.requires_grad:
++                break
++
++            grads = torch.autograd.grad(
++                reward,
++                grad_targets,
++                retain_graph=False,
++                allow_unused=True,
++            )
++            grad_by_name = dict(zip(grad_names, grads))
++            step_size = self._embedding_guidance_alpha(t)
++
++            msa_latent = self._normalized_embedding_step(
++                msa_latent,
++                grad_by_name.get("msa"),
++                step_size,
++                residue_mask=fixed_residue_mask,
++            )
++            pair = self._normalized_embedding_step(
++                pair,
++                grad_by_name.get("pair"),
++                step_size,
++                pair_mask=pair_update_mask,
++            )
++            state = self._normalized_embedding_step(
++                state,
++                grad_by_name.get("state"),
++                step_size,
++                residue_mask=fixed_residue_mask,
++            )
++
++        if bool(self._embedding_guidance_value("embedding_guidance_persist", True)):
++            self.embedding_guidance_msa_delta = (msa_latent.detach() - base_msa_latent).detach()
++            self.embedding_guidance_pair_delta = (pair.detach() - base_pair).detach()
++            self.embedding_guidance_state_delta = (state.detach() - base_state).detach()
++
++        with torch.no_grad():
++            _, _, px0, _, alpha, _, plddt = self.model.forward_from_embeddings(
++                seq_in,
++                xt_in,
++                idx_pdb,
++                msa_latent,
++                msa_full_emb,
++                pair,
++                state,
++                return_infer=True,
++                motif_mask=motif_mask,
++                cyclic_reses=self.cyclic_reses,
++            )
++
++        return px0, alpha, plddt
++
+     def sample_step(self, *, t, x_t, seq_init, final_step):
+         """
+         Generate the next pose that the model should be supplied at timestep t-1.
+@@ -841,30 +1032,44 @@ class SelfConditioning(Sampler):
+         ####################
+         ### Forward Pass ###
+         ####################
+-        with torch.no_grad():
+-            msa_prev, pair_prev, px0, state_prev, alpha, logits, plddt = self.model(
+-                msa_masked,
+-                msa_full,
+-                seq_in,
+-                xt_in,
+-                idx_pdb,
++        if self._embedding_guidance_enabled():
++            px0, alpha, plddt = self._embedding_guided_forward(
++                msa_masked=msa_masked,
++                msa_full=msa_full,
++                seq_in=seq_in,
++                xt_in=xt_in,
++                idx_pdb=idx_pdb,
+                 t1d=t1d,
+                 t2d=t2d,
+                 xyz_t=xyz_t,
+                 alpha_t=alpha_t,
+-                msa_prev=None,
+-                pair_prev=None,
+-                state_prev=None,
+-                t=torch.tensor(t),
+-                return_infer=True,
+-                motif_mask=self.diffusion_mask.squeeze().to(self.device),
+-                cyclic_reses=self.cyclic_reses,
++                t=t,
+             )
++        else:
++            with torch.no_grad():
++                msa_prev, pair_prev, px0, state_prev, alpha, logits, plddt = self.model(
++                    msa_masked,
++                    msa_full,
++                    seq_in,
++                    xt_in,
++                    idx_pdb,
++                    t1d=t1d,
++                    t2d=t2d,
++                    xyz_t=xyz_t,
++                    alpha_t=alpha_t,
++                    msa_prev=None,
++                    pair_prev=None,
++                    state_prev=None,
++                    t=torch.tensor(t),
++                    return_infer=True,
++                    motif_mask=self.diffusion_mask.squeeze().to(self.device),
++                    cyclic_reses=self.cyclic_reses,
++                )
+ 
+-            if self.symmetry is not None and self.inf_conf.symmetric_self_cond:
+-                px0 = self.symmetrise_prev_pred(px0=px0, seq_in=seq_in, alpha=alpha)[
+-                    :, :, :3
+-                ]
++        if self.symmetry is not None and self.inf_conf.symmetric_self_cond:
++            px0 = self.symmetrise_prev_pred(px0=px0, seq_in=seq_in, alpha=alpha)[
++                :, :, :3
++            ]
+ 
+         self.prev_pred = torch.clone(px0)
+ 
+@@ -885,6 +1090,7 @@ class SelfConditioning(Sampler):
+                 diffusion_mask=self.mask_str.squeeze(),
+                 align_motif=self.inf_conf.align_motif,
+                 include_motif_sidechains=self.preprocess_conf.motif_sidechain_input,
++                apply_potential_gradients=not self._embedding_guidance_enabled(),
+             )
+             self._log.info(
+                 f"Timestep {t}, input to next step: { seq2chars(torch.argmax(seq_t_1, dim=-1).tolist())}"
+@@ -915,6 +1121,75 @@ class SelfConditioning(Sampler):
+         return px0_sym
+ 
+ 
++class OneShotSampler(Sampler):
++    """
++    Model runner for single-step template-conditioned prediction.
++    """
++
++    def sample_init(self, return_forward_trajectory=False):
++        target_feats = self.process_target_for_init()
++        target_len = len(target_feats["pdb_idx"])
++        if target_len <= 0:
++            raise ValueError("OneShotSampler target PDB has no parsed residues")
++        self.contig_conf.contigs = [f"{target_len}-{target_len}"]
++        return super().sample_init(return_forward_trajectory=return_forward_trajectory)
++
++    def sample_step(self, *, t, x_t, seq_init, final_step):
++        msa_masked, msa_full, seq_in, xt_in, idx_pdb, t1d, t2d, xyz_t, alpha_t = (
++            self._preprocess(seq_init, x_t, t)
++        )
++
++        xyz_t = torch.zeros_like(xyz_t)
++        t2d[..., :44] = torch.zeros_like(t2d[..., :44])
++
++        if self.symmetry is not None:
++            idx_pdb, self.chain_idx = self.symmetry.res_idx_procesing(res_idx=idx_pdb)
++
++        with torch.no_grad():
++            _, _, px0, _, alpha, _, plddt = self.model(
++                msa_masked,
++                msa_full,
++                seq_in,
++                xt_in,
++                idx_pdb,
++                t1d=t1d,
++                t2d=t2d,
++                xyz_t=xyz_t,
++                alpha_t=alpha_t,
++                msa_prev=None,
++                pair_prev=None,
++                state_prev=None,
++                t=torch.tensor(t),
++                return_infer=True,
++                motif_mask=self.diffusion_mask.squeeze().to(self.device),
++                cyclic_reses=self.cyclic_reses,
++            )
++
++        self.prev_pred = torch.clone(px0)
++        _, px0 = self.allatom(torch.argmax(seq_in, dim=-1), px0, alpha)
++        px0 = px0.squeeze()[:, :14]
++
++        seq_t_1 = torch.clone(seq_init)
++        x_t_1 = torch.clone(px0).to(x_t.device)
++        px0 = px0.to(x_t.device)
++
++        if self.symmetry is not None:
++            x_t_1, seq_t_1 = self.symmetry.apply_symmetry(x_t_1, seq_t_1)
++
++        return px0, x_t_1, seq_t_1, plddt
++
++
++class VoxelSampler(SelfConditioning):
++    """
++    Self-conditioning sampler used by ProteinSketch JSON/VDB-guided inference.
++    """
++
++    def process_target_for_init(self):
++        return iu.process_target(
++            self.inf_conf.input_pdb, parse_hetatom=True, center=True
++        )
++
++
+ class ScaffoldedSampler(SelfConditioning):
+     """
+     Model Runner for Scaffold-Constrained diffusion
+diff --git a/rfdiffusion/inference/utils.py b/rfdiffusion/inference/utils.py
+index 3fb1411..cbb217a 100644
+--- a/rfdiffusion/inference/utils.py
++++ b/rfdiffusion/inference/utils.py
+@@ -1,5 +1,6 @@
+ import numpy as np
+ import os
++from pathlib import Path
+ from omegaconf import DictConfig
+ import torch
+ import torch.nn.functional as nn
+@@ -8,6 +9,7 @@ from scipy.spatial.transform import Rotation as scipy_R
+ from rfdiffusion.util import rigid_from_3_points
+ from rfdiffusion.util_module import ComputeAllAtomCoords
+ from rfdiffusion import util
++from rfdiffusion import volume_sketch
+ import random
+ import logging
+ from rfdiffusion.inference import model_runners
+@@ -412,6 +414,7 @@ class Denoise:
+         fix_motif=True,
+         align_motif=True,
+         include_motif_sidechains=True,
++        apply_potential_gradients=True,
+     ):
+         """
+         Wrapper function to take px0, xt and t, and to produce xt-1
+@@ -481,11 +484,12 @@ class Denoise:
+         # Apply gradient step from guiding potentials
+         # This can be moved to below where the full atom representation is calculated to allow for potentials involving sidechains
+ 
+-        grad_ca = self.get_potential_gradients(
+-            xt.clone(), diffusion_mask=diffusion_mask
+-        )
++        if apply_potential_gradients:
++            grad_ca = self.get_potential_gradients(
++                xt.clone(), diffusion_mask=diffusion_mask
++            )
+ 
+-        ca_deltas += self.potential_manager.get_guide_scale(t) * grad_ca
++            ca_deltas += self.potential_manager.get_guide_scale(t) * grad_ca
+ 
+         # add the delta to the new frames
+         frames_next = torch.from_numpy(frames_next) + ca_deltas[:, None, :]  # translate
+@@ -501,7 +505,291 @@ class Denoise:
+         return fullatom_next.squeeze()[:, :14, :], px0
+ 
+ 
++def _cfg_get(conf_node, key, default=None):
++    if conf_node is None:
++        return default
++    if hasattr(conf_node, "get"):
++        return conf_node.get(key, default)
++    return getattr(conf_node, key, default)
++
++
++def _is_missing(value):
++    return value is None or value == [] or value == ""
++
++
++def _sketch_json(conf):
++    return _cfg_get(conf.inference, "sketch_json", None)
++
++
++def _sketch_json_volume_index(conf) -> int:
++    return int(_cfg_get(conf.inference, "sketch_json_volume_index", 0) or 0)
++
++
++def _default_volume_sketch_potentials(mode):
++    if mode in {"binder", "binder_partial"}:
++        return [
++            "type:volume_sketch_binder_shell_ncontacts,weight:0.1",
++            "type:volume_sketch_shell_nearest_binder_distance,weight:0.001",
++            "type:interface_ncontacts,weight:1",
++        ]
++    return [
++        "type:volume_sketch_monomer_shell_ncontacts,weight:0.1",
++        "type:volume_sketch_shell_nearest_monomer_distance,weight:0.001",
++    ]
++
++
++def _json_generated_path(conf, suffix: str) -> Path:
++    output_prefix = _cfg_get(conf.inference, "output_prefix", "samples/design")
++    prefix = Path(str(output_prefix)).expanduser()
++    return prefix.parent / f"{prefix.name}{suffix}"
++
++
++def _joined_contig_ranges(pdb_path: Path) -> str:
++    ranges = volume_sketch.protein_contig_ranges(pdb_path)
++    if not ranges:
++        raise ValueError(f"ProteinSketch JSON target has no CA residues: {pdb_path}")
++    return "/0 ".join(ranges)
++
++
++def _json_volume_length_range(sketch_json, volume_index: int) -> str:
++    length_range = volume_sketch.proteinsketch_volume_length_range(
++        sketch_json,
++        volume_index=volume_index,
++    )
++    if length_range is None:
++        raise ValueError(
++            "ProteinSketch JSON volume auto-contig requires estimatedResidueCountRange, "
++            "or set contigmap.contigs explicitly."
++        )
++    return length_range
++
++
++def _apply_sketch_json_defaults(conf, sketch_json) -> None:
++    mode = volume_sketch.proteinsketch_mode(sketch_json)
++    volume_index = _sketch_json_volume_index(conf)
++    has_volume = volume_sketch.proteinsketch_has_section(sketch_json, "volume")
++    conf.inference.sketch_json_mode = mode
++    conf.inference.sketch_json_volume_index = volume_index
++
++    target_path = None
++    backbone_len = None
++    if mode in {"binder", "binder_partial"}:
++        target_path = volume_sketch.write_proteinsketch_pdb(
++            sketch_json,
++            "target",
++            _json_generated_path(conf, "_json_target.pdb"),
++            chain_id=None,
++            renumber=False,
++        )
++        if _cfg_get(conf.inference, "volume_sketch_hotspot", True):
++            hotspots = volume_sketch.proteinsketch_target_hotspots(sketch_json)
++            if hotspots:
++                conf.ppi.hotspot_res = hotspots
++                logging.getLogger(__name__).info(
++                    "ProteinSketch JSON hotspots override ppi.hotspot_res: %s",
++                    ",".join(hotspots),
++                )
++
++    if mode == "monomer_partial":
++        backbone_path = volume_sketch.write_proteinsketch_pdb(
++            sketch_json,
++            "backbone",
++            _json_generated_path(conf, "_json_backbone.pdb"),
++            chain_id="A",
++            renumber=True,
++        )
++        conf.inference.input_pdb = str(backbone_path)
++        backbone_len = volume_sketch.proteinsketch_pdb_length(sketch_json, "backbone")
++    elif mode == "binder_partial":
++        complex_path, backbone_len = volume_sketch.write_proteinsketch_complex_pdb(
++            sketch_json,
++            _json_generated_path(conf, "_json_complex.pdb"),
++            backbone_chain="Z",
++        )
++        conf.inference.input_pdb = str(complex_path)
++    elif mode == "binder":
++        conf.inference.input_pdb = str(target_path)
++
++    if has_volume:
++        volume_sketch.validate_proteinsketch_volume_json(
++            sketch_json,
++            volume_index=volume_index,
++        )
++        if _cfg_get(conf.inference, "volume_sketch_cutoff", None) is None:
++            conf.inference.volume_sketch_cutoff = -1.0
++        if _cfg_get(conf.inference, "volume_sketch_max_sdf", None) is None:
++            conf.inference.volume_sketch_max_sdf = 0.0
++
++    if mode in {"monomer_partial", "binder_partial"} and _cfg_get(conf.diffuser, "partial_T", None) is None:
++        conf.diffuser.partial_T = 10
++
++    if _is_missing(_cfg_get(conf.contigmap, "contigs", None)):
++        if mode == "monomer":
++            conf.contigmap.contigs = [_json_volume_length_range(sketch_json, volume_index)]
++        elif mode == "binder":
++            conf.contigmap.contigs = [
++                f"{_joined_contig_ranges(target_path)}/0 {_json_volume_length_range(sketch_json, volume_index)}"
++            ]
++        elif mode == "monomer_partial":
++            conf.contigmap.contigs = [f"{backbone_len}-{backbone_len}"]
++        elif mode == "binder_partial":
++            conf.contigmap.contigs = [
++                f"{backbone_len}-{backbone_len}/0 {_joined_contig_ranges(target_path)}"
++            ]
++        logging.getLogger(__name__).info(
++            "ProteinSketch JSON auto contigmap.contigs: %s",
++            conf.contigmap.contigs,
++        )
++
++    if has_volume and _is_missing(_cfg_get(conf.potentials, "guiding_potentials", None)):
++        conf.potentials.guiding_potentials = _default_volume_sketch_potentials(mode)
++        logging.getLogger(__name__).info(
++            "ProteinSketch JSON default guiding_potentials (%s): %s",
++            mode,
++            conf.potentials.guiding_potentials,
++        )
++
++
++def apply_volume_sketch_defaults(conf):
++    if _cfg_get(conf.inference, "model_runner", None) != "VoxelSampler":
++        return
++
++    sketch_json = _sketch_json(conf)
++    if sketch_json is not None:
++        _apply_sketch_json_defaults(conf, sketch_json)
++
++
++
++def _volume_sketch_points_from_potentials(potential_manager):
++    if potential_manager is None:
++        return None, None
++
++    for potential in getattr(potential_manager, "potentials_to_apply", []):
++        points = getattr(potential, "sketch_points", None)
++        geometries = getattr(potential, "sketch_geometries", None)
++        if points is not None and geometries:
++            return points, geometries
++
++    return None, None
++
++
++def _volume_sketch_target_pdb_path_from_potentials(potential_manager):
++    if potential_manager is None:
++        return None
++
++    for potential in getattr(potential_manager, "potentials_to_apply", []):
++        target_pdb_path = getattr(potential, "target_pdb_path", None)
++        if target_pdb_path:
++            return Path(str(target_pdb_path))
++
++    return None
++
++
++def _target_frame_pdb_path(sampler):
++    potential_path = _volume_sketch_target_pdb_path_from_potentials(
++        getattr(sampler, "potential_manager", None)
++    )
++    if potential_path is not None:
++        return potential_path
++
++    inf_conf = getattr(sampler, "inf_conf", None)
++    input_pdb = _cfg_get(inf_conf, "input_pdb", None)
++    if not _is_missing(input_pdb):
++        return Path(str(input_pdb))
++
++    return None
++
++
++def _pdb_ca_center(pdb_path) -> np.ndarray:
++    target_struct = parse_pdb(str(pdb_path), parse_hetatom=True)
++    return target_struct["xyz"][:, :1, :].mean(axis=0, keepdims=True).reshape(3)
++
++
++def _shift_pdb_atom_line(line: str, shift: np.ndarray) -> str:
++    if not line.startswith(("ATOM  ", "HETATM")):
++        return line.rstrip("\n")
++
++    x = float(line[30:38]) - float(shift[0])
++    y = float(line[38:46]) - float(shift[1])
++    z = float(line[46:54]) - float(shift[2])
++    chars = list(line.rstrip("\n").ljust(80))
++    chars[30:38] = list(f"{x:8.3f}")
++    chars[38:46] = list(f"{y:8.3f}")
++    chars[46:54] = list(f"{z:8.3f}")
++    return "".join(chars).rstrip()
++
++
++def _write_centered_target_frame_pdb(source_pdb, output_path):
++    source = Path(source_pdb)
++    if not source.exists():
++        raise ValueError(f"ProteinSketch target frame PDB does not exist: {source}")
++
++    shift = _pdb_ca_center(source)
++    lines = [
++        _shift_pdb_atom_line(line, shift)
++        for line in source.read_text(encoding="utf-8").splitlines()
++        if line.startswith(("ATOM  ", "HETATM"))
++    ]
++    if not lines:
++        raise ValueError(f"ProteinSketch target frame PDB has no ATOM/HETATM rows: {source}")
++
++    path = Path(output_path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text("\n".join(lines) + "\nEND\n", encoding="utf-8")
++    return path
++
++
++def _write_json_target_pdb_if_available(sampler, sketch_json, output_path):
++    if sketch_json is None or not volume_sketch.proteinsketch_has_section(sketch_json, "target"):
++        return None
++
++    target_path = Path(output_path).parent / f"{Path(sketch_json).stem}.pdb"
++    source_path = _target_frame_pdb_path(sampler)
++    if source_path is None:
++        raise ValueError(
++            "Cannot write ProteinSketch target PDB in RFdiffusion frame without "
++            "a potential target_pdb_path or inference.input_pdb."
++        )
++
++    written = _write_centered_target_frame_pdb(source_path, target_path)
++    logging.getLogger(__name__).info("Wrote ProteinSketch target PDB: %s", written)
++    return written
++
++
++def write_volume_sketch_points_if_requested(sampler):
++    inf_conf = getattr(sampler, "inf_conf", None)
++    if not _cfg_get(inf_conf, "write_volume_sketch_points", False):
++        return None
++
++    output_path = _cfg_get(inf_conf, "volume_sketch_points_path", None)
++    if _is_missing(output_path):
++        output_path = f"{inf_conf.output_prefix}_volume_sketch_points.pdb"
++    sketch_json = _cfg_get(inf_conf, "sketch_json", None)
++
++    points, geometries = _volume_sketch_points_from_potentials(
++        getattr(sampler, "potential_manager", None)
++    )
++    if points is None:
++        if sketch_json is None:
++            raise ValueError(
++                "inference.write_volume_sketch_points requires inference.sketch_json."
++            )
++        target_frame_path = _target_frame_pdb_path(sampler)
++        points, geometries = volume_sketch.volume_sketch_points(
++            sketch_json,
++            target_center=_pdb_ca_center(target_frame_path) if target_frame_path is not None else None,
++            cutoff=_cfg_get(inf_conf, "volume_sketch_cutoff", None),
++            max_sdf=_cfg_get(inf_conf, "volume_sketch_max_sdf", None),
++            volume_index=_cfg_get(inf_conf, "sketch_json_volume_index", 0),
++        )
++
++    written = volume_sketch.write_volume_shell_points_pdb(output_path, points, geometries)
++    _write_json_target_pdb_if_available(sampler, sketch_json, output_path)
++    logging.getLogger(__name__).info("Wrote volume sketch points: %s", written)
++    return written
++
+ def sampler_selector(conf: DictConfig):
++    apply_volume_sketch_defaults(conf)
+     if conf.scaffoldguided.scaffoldguided:
+         sampler = model_runners.ScaffoldedSampler(conf)
+     else:
+@@ -511,6 +799,11 @@ def sampler_selector(conf: DictConfig):
+             sampler = model_runners.SelfConditioning(conf)
+         elif conf.inference.model_runner == "ScaffoldedSampler":
+             sampler = model_runners.ScaffoldedSampler(conf)
++        elif conf.inference.model_runner == "OneShotSampler":
++            sampler = model_runners.OneShotSampler(conf)
++            conf.inference.output_prefix = f"./{conf.inference.input_pdb.split('/')[-1].replace('.pdb','_oneshot')}"
++        elif conf.inference.model_runner == "VoxelSampler":
++            sampler = model_runners.VoxelSampler(conf)
+         else:
+             raise ValueError(f"Unrecognized sampler {conf.model_runner}")
+     return sampler
+@@ -610,12 +903,14 @@ def parse_pdb_lines(lines, parse_hetatom=False, ignore_het_h=True):
+     return out
+ 
+ 
+-def process_target(pdb_path, parse_hetatom=False, center=True):
++def process_target(pdb_path, parse_hetatom=False, center=True, voxel_center=None):
+     # Read target pdb and extract features.
+     target_struct = parse_pdb(pdb_path, parse_hetatom=parse_hetatom)
+ 
+     # Zero-center positions
+     ca_center = target_struct["xyz"][:, :1, :].mean(axis=0, keepdims=True)
++    if voxel_center is not None:
++        ca_center = voxel_center
+     if not center:
+         ca_center = 0
+     xyz = torch.from_numpy(target_struct["xyz"] - ca_center)
+diff --git a/rfdiffusion/openvdb_compat.py b/rfdiffusion/openvdb_compat.py
+new file mode 100644
+index 0000000..c0d3735
+--- /dev/null
++++ b/rfdiffusion/openvdb_compat.py
+@@ -0,0 +1,39 @@
++from __future__ import annotations
++
++
++_OPENVDB_MODULE = None
++_OPENVDB_IMPORT_ERROR: ImportError | None = None
++
++
++def preload_openvdb():
++    """Load OpenVDB before torch can bind an incompatible system libstdc++."""
++    global _OPENVDB_MODULE, _OPENVDB_IMPORT_ERROR
++    if _OPENVDB_MODULE is not None:
++        return _OPENVDB_MODULE
++
++    try:
++        import pyopenvdb as vdb
++    except ImportError as exc:
++        _OPENVDB_IMPORT_ERROR = exc
++        return None
++
++    _OPENVDB_MODULE = vdb
++    _OPENVDB_IMPORT_ERROR = None
++    return _OPENVDB_MODULE
++    return None
++
++
++def import_openvdb():
++    module = preload_openvdb()
++    if module is not None:
++        return module
++
++    hint = (
++        "ProteinSketch VDB volume input requires pyopenvdb. "
++        "Install it in the RFdiffusion conda environment. If pyopenvdb reports "
++        "CXXABI or libtbb errors, run with the conda env lib directory first in "
++        "LD_LIBRARY_PATH."
++    )
++    if _OPENVDB_IMPORT_ERROR is not None:
++        raise ImportError(hint) from _OPENVDB_IMPORT_ERROR
++    raise ImportError(hint)
+diff --git a/rfdiffusion/potentials/manager.py b/rfdiffusion/potentials/manager.py
+index 98b0d5e..8066ea1 100644
+--- a/rfdiffusion/potentials/manager.py
++++ b/rfdiffusion/potentials/manager.py
+@@ -1,6 +1,7 @@
+ import torch
+ from rfdiffusion.potentials import potentials as potentials
+ import numpy as np 
++import sys
+ 
+ 
+ def make_contact_matrix(nchain, intra_all=False, inter_all=False, contact_string=None):
+@@ -102,16 +103,31 @@ class PotentialManager:
+         else: 
+             setting_list = [self.parse_potential_string(potstr) for potstr in potentials_config.guiding_potentials]
+ 
+-
+-        # PPI potentials require knowledge about the binderlen which may be detected at runtime
+-        # This is a mechanism to still allow this info to be used in potentials - NRB 
+-        if binderlen > 0:
+-            binderlen_update   = { 'binderlen': binderlen }
+-            hotspot_res_update = { 'hotspot_res': hotspot_0idx }
+-
+-            for setting in setting_list:
+-                if setting['type'] in potentials.require_binderlen:
+-                    setting.update(binderlen_update)
++        sketch_json = self.inference_config.get("sketch_json", None)
++
++        # PPI potentials require knowledge about binder length, which is detected at runtime.
++        for setting in setting_list:
++            if setting['type'] in potentials.require_binderlen:
++                if binderlen <= 0:
++                    raise ValueError(f'potential {setting["type"]} requires binderlen, but binderlen={binderlen}')
++                setting['binderlen'] = binderlen
++
++            if setting['type'] in potentials.require_target_pdb_path and 'target_pdb_path' not in setting:
++                setting['target_pdb_path'] = self.inference_config.input_pdb
++
++            if setting['type'] in potentials.require_volume_sketch_path:
++                if 'sketch_json_path' not in setting:
++                    setting['sketch_json_path'] = sketch_json
++                if setting['sketch_json_path'] is None:
++                    raise ValueError(
++                        f'potential {setting["type"]} requires inference.sketch_json'
++                    )
++                if 'cutoff' not in setting:
++                    setting['cutoff'] = self.inference_config.get("volume_sketch_cutoff", None)
++                if 'max_sdf' not in setting:
++                    setting['max_sdf'] = self.inference_config.get("volume_sketch_max_sdf", None)
++                if 'volume_index' not in setting:
++                    setting['volume_index'] = self.inference_config.get("sketch_json_volume_index", 0)
+ 
+         self.potentials_to_apply = self.initialize_all_potentials(setting_list)
+         self.T = diffuser_config.T
+@@ -131,13 +147,30 @@ class PotentialManager:
+             'setting1:val1,setting2:val2,setting3:val3' -> {setting1:val1,setting2:val2,setting3:val3}
+         '''
+ 
+-        setting_dict = {entry.split(':')[0]:entry.split(':')[1] for entry in potstr.split(',')}
++        setting_dict = {}
++        for entry in potstr.split(','):
++            key, value = entry.split(':', 1)
++            setting_dict[key.strip()] = value.strip()
+ 
+         for key in setting_dict:
+-            if not key == 'type': setting_dict[key] = float(setting_dict[key])
++            if key == 'centered':
++                setting_dict[key] = self._parse_bool(setting_dict[key])
++            elif key not in ['type', 'target_pdb_path', 'sketch_json_path']:
++                setting_dict[key] = float(setting_dict[key])
+ 
+         return setting_dict
+ 
++    @staticmethod
++    def _parse_bool(value):
++        if isinstance(value, bool):
++            return value
++        value_str = str(value).strip().lower()
++        if value_str in {'true', '1', 'yes', 'y', 'on'}:
++            return True
++        if value_str in {'false', '0', 'no', 'n', 'off'}:
++            return False
++        raise ValueError(f"Unable to parse boolean value from {value!r}")
++
+     def initialize_all_potentials(self, setting_list):
+         '''
+             Given a list of potential dictionaries where each dictionary defines the configurations for a single potential,
+@@ -191,17 +224,32 @@ class PotentialManager:
+         
+         '''
+         
++        def valley(t):
++            if t < self.T/2:
++                return 2 * self.guide_scale * t / self.T
++            else:
++                return 2 * self.guide_scale * (t - self.T) / self.T
++
++        def tide(t):
++            if t > self.T/2:
++                return self.guide_scale * (t - self.T)**2 / self.T**2
++            else:
++                return self.guide_scale * (1 - (t - self.T/2)**2 / (self.T/2)**2)
++
+         implemented_decay_types = {
+                 'constant': lambda t: self.guide_scale,
+                 # Linear interpolation with y2: 0, y1: guide_scale, x2: 0, x1: T, x: t
+                 'linear'  : lambda t: t/self.T * self.guide_scale,
+                 'quadratic' : lambda t: t**2/self.T**2 * self.guide_scale,
+-                'cubic' : lambda t: t**3/self.T**3 * self.guide_scale
++                'cubic' : lambda t: t**3/self.T**3 * self.guide_scale,
++                'valley' : valley,
++                'tide' : tide,
++                'half' : lambda t: self.guide_scale if t < self.T/2 else 0,
+         }
+-        
++
+         if self.guide_decay not in implemented_decay_types:
+             sys.exit(f'decay_type must be one of {implemented_decay_types.keys()}. Received decay_type={self.guide_decay}. Exiting.')
+-        
++
+         return implemented_decay_types[self.guide_decay](t)
+ 
+ 
+diff --git a/rfdiffusion/potentials/potentials.py b/rfdiffusion/potentials/potentials.py
+index b43a2a6..fd5b97d 100644
+--- a/rfdiffusion/potentials/potentials.py
++++ b/rfdiffusion/potentials/potentials.py
+@@ -1,6 +1,8 @@
+ import torch
+-import numpy as np 
++from rfdiffusion import volume_sketch
+ from rfdiffusion.util import generate_Cbeta
++from rfdiffusion.inference import utils as iu
++import numpy as np
+ 
+ class Potential:
+     '''
+@@ -454,6 +456,243 @@ class substrate_contacts(Potential):
+             self.motif_frame = xyz[rand_idx[0],:4]
+             self.motif_mapping = [(rand_idx, i) for i in range(4)]
+ 
++
++def _target_center(target_pdb_path):
++    target_struct = iu.parse_pdb(target_pdb_path, parse_hetatom=True)
++    return target_struct["xyz"][:, :1, :].mean(axis=0, keepdims=True)
++
++
++def _contact_score(dgram, d_0, r_0):
++    divide_by_r_0 = (dgram - d_0) / r_0
++    return 1.0 / (1.0 + torch.pow(divide_by_r_0, 6))
++
++
++class VolumeSketchPotential(Potential):
++    def _init_volume_sketch(
++        self,
++        sketch_json_path,
++        target_pdb_path=None,
++        centered=False,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        self.cutoff = None if cutoff is None else float(cutoff)
++        self.max_sdf = None if max_sdf is None else float(max_sdf)
++        self.volume_index = int(volume_index)
++        self.target_pdb_path = target_pdb_path
++        target_center = None
++        if target_pdb_path is not None:
++            target_center = _target_center(target_pdb_path)
++
++        self.sketch_points, self.sketch_geometries = volume_sketch.volume_sketch_points(
++            sketch_json_path,
++            target_center=target_center,
++            centered=bool(centered),
++            cutoff=self.cutoff,
++            max_sdf=self.max_sdf,
++            volume_index=self.volume_index,
++        )
++        if self.sketch_points.numel() == 0:
++            raise ValueError(f"No ProteinSketch VDB shell points found in {sketch_json_path}")
++
++    def _points_for(self, xyz):
++        return self.sketch_points.to(device=xyz.device, dtype=xyz.dtype)
++
++    def _inside_count(self, ca):
++        inside = volume_sketch.points_inside_geometries(
++            ca,
++            self.sketch_geometries,
++            cutoff=self.cutoff,
++            max_sdf=self.max_sdf,
++        )
++        print(f"INSIDE VOLUME SKETCH: {inside.sum()} / {inside.shape[0]}")
++
++
++class VolumeSketchShellContactPotential(VolumeSketchPotential):
++    log_name = "VOLUME SKETCH SHELL CONTACTS"
++
++    def _init_volume_sketch_shell_contacts(
++        self,
++        weight,
++        sketch_json_path,
++        target_pdb_path=None,
++        d_0=1,
++        r_0=10,
++        centered=False,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        self.weight = weight
++        self.r_0 = r_0
++        self.d_0 = d_0
++        self._init_volume_sketch(
++            sketch_json_path=sketch_json_path,
++            target_pdb_path=target_pdb_path,
++            centered=centered,
++            cutoff=cutoff,
++            max_sdf=max_sdf,
++            volume_index=volume_index,
++        )
++
++    def _compute_shell_contacts(self, ca):
++        self._inside_count(ca)
++        shell = self._points_for(ca)
++        dgram = torch.cdist(ca[None, ...].contiguous(), shell[None, ...].contiguous(), p=2)
++        score = _contact_score(dgram, self.d_0, self.r_0).sum()
++        print(f"{self.log_name}:", score)
++        return self.weight * score
++
++
++class volume_sketch_binder_shell_ncontacts(VolumeSketchShellContactPotential):
++    def __init__(
++        self,
++        binderlen,
++        weight,
++        sketch_json_path,
++        target_pdb_path,
++        d_0=1,
++        r_0=10,
++        centered=False,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        print("INITIALIZING POTENTIAL: VOLUME SKETCH BINDER SHELL NCONTACTS")
++        self.binderlen = int(binderlen)
++        self._init_volume_sketch_shell_contacts(
++            weight=weight,
++            sketch_json_path=sketch_json_path,
++            target_pdb_path=target_pdb_path,
++            d_0=d_0,
++            r_0=r_0,
++            centered=centered,
++            cutoff=cutoff,
++            max_sdf=max_sdf,
++            volume_index=volume_index,
++        )
++
++    def compute(self, xyz):
++        return self._compute_shell_contacts(xyz[:self.binderlen, 1])
++
++
++class volume_sketch_monomer_shell_ncontacts(VolumeSketchShellContactPotential):
++    def __init__(
++        self,
++        weight,
++        sketch_json_path,
++        d_0=1,
++        r_0=10,
++        centered=True,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        print("INITIALIZING POTENTIAL: VOLUME SKETCH MONOMER SHELL NCONTACTS")
++        self._init_volume_sketch_shell_contacts(
++            weight=weight,
++            sketch_json_path=sketch_json_path,
++            d_0=d_0,
++            r_0=r_0,
++            centered=centered,
++            cutoff=cutoff,
++            max_sdf=max_sdf,
++            volume_index=volume_index,
++        )
++
++    def compute(self, xyz):
++        return self._compute_shell_contacts(xyz[:, 1])
++
++
++class VolumeSketchNearestDistancePotential(VolumeSketchPotential):
++    def _init_volume_sketch_nearest_distance(
++        self,
++        weight,
++        sketch_json_path,
++        target_pdb_path=None,
++        centered=False,
++        min_dist=0,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        self.weight = weight
++        self.min_dist = min_dist
++        self._init_volume_sketch(
++            sketch_json_path=sketch_json_path,
++            target_pdb_path=target_pdb_path,
++            centered=centered,
++            cutoff=cutoff,
++            max_sdf=max_sdf,
++            volume_index=volume_index,
++        )
++
++    def _compute_nearest_distance(self, ca):
++        shell = self._points_for(ca)
++        dgram = torch.cdist(ca[None, ...].contiguous(), shell[None, ...].contiguous(), p=2)
++        min_dgram = torch.min(dgram, dim=1)[0].reshape(-1)
++        min_dgram = min_dgram[min_dgram >= self.min_dist].sum()
++        print("VOLUME SKETCH NEAREST SHELL DISTANCE:", -min_dgram)
++        return -self.weight * min_dgram
++
++
++class volume_sketch_shell_nearest_monomer_distance(VolumeSketchNearestDistancePotential):
++    def __init__(
++        self,
++        weight,
++        sketch_json_path,
++        centered=True,
++        min_dist=0,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        print("INITIALIZING POTENTIAL: VOLUME SKETCH SHELL NEAREST MONOMER DISTANCE")
++        self._init_volume_sketch_nearest_distance(
++            weight=weight,
++            sketch_json_path=sketch_json_path,
++            centered=centered,
++            min_dist=min_dist,
++            cutoff=cutoff,
++            max_sdf=max_sdf,
++            volume_index=volume_index,
++        )
++
++    def compute(self, xyz):
++        return self._compute_nearest_distance(xyz[:, 1])
++
++
++class volume_sketch_shell_nearest_binder_distance(VolumeSketchNearestDistancePotential):
++    def __init__(
++        self,
++        binderlen,
++        weight,
++        sketch_json_path,
++        target_pdb_path,
++        centered=False,
++        min_dist=0,
++        cutoff=None,
++        max_sdf=None,
++        volume_index=0,
++    ):
++        print("INITIALIZING POTENTIAL: VOLUME SKETCH SHELL NEAREST BINDER DISTANCE")
++        self.binderlen = int(binderlen)
++        self._init_volume_sketch_nearest_distance(
++            weight=weight,
++            sketch_json_path=sketch_json_path,
++            target_pdb_path=target_pdb_path,
++            centered=centered,
++            min_dist=min_dist,
++            cutoff=cutoff,
++            max_sdf=max_sdf,
++            volume_index=volume_index,
++        )
++
++    def compute(self, xyz):
++        return self._compute_nearest_distance(xyz[:self.binderlen, 1])
++
++
+ # Dictionary of types of potentials indexed by name of potential. Used by PotentialManager.
+ # If you implement a new potential you must add it to this dictionary for it to be used by
+ # the PotentialManager
+@@ -464,12 +703,25 @@ implemented_potentials = { 'monomer_ROG':          monomer_ROG,
+                            'interface_ncontacts':  interface_ncontacts,
+                            'monomer_contacts':     monomer_contacts,
+                            'olig_contacts':        olig_contacts,
+-                           'substrate_contacts':    substrate_contacts}
++                           'substrate_contacts':    substrate_contacts,
++                           'volume_sketch_monomer_shell_ncontacts': volume_sketch_monomer_shell_ncontacts,
++                           'volume_sketch_binder_shell_ncontacts': volume_sketch_binder_shell_ncontacts,
++                           'volume_sketch_shell_nearest_monomer_distance': volume_sketch_shell_nearest_monomer_distance,
++                           'volume_sketch_shell_nearest_binder_distance': volume_sketch_shell_nearest_binder_distance}
+ 
+ require_binderlen      = { 'binder_ROG',
+-                           'binder_distance_ReLU',
+-                           'binder_any_ReLU',
++                           'binder_distance_ReLU',
++                           'binder_any_ReLU',
+                            'dimer_ROG',
+                            'binder_ncontacts',
+-                           'interface_ncontacts'}
++                           'interface_ncontacts',
++                           'volume_sketch_binder_shell_ncontacts',
++                           'volume_sketch_shell_nearest_binder_distance'}
++
++require_target_pdb_path = { 'volume_sketch_binder_shell_ncontacts',
++                            'volume_sketch_shell_nearest_binder_distance'}
+ 
++require_volume_sketch_path = { 'volume_sketch_monomer_shell_ncontacts',
++                               'volume_sketch_binder_shell_ncontacts',
++                               'volume_sketch_shell_nearest_monomer_distance',
++                               'volume_sketch_shell_nearest_binder_distance'}
+diff --git a/rfdiffusion/volume_sketch.py b/rfdiffusion/volume_sketch.py
+new file mode 100644
+index 0000000..9b80d5b
+--- /dev/null
++++ b/rfdiffusion/volume_sketch.py
+@@ -0,0 +1,549 @@
++from __future__ import annotations
++
++import base64
++import json
++import os
++import tempfile
++from dataclasses import dataclass
++from pathlib import Path
++from typing import Optional
++
++import numpy as np
++import torch
++
++from rfdiffusion.openvdb_compat import import_openvdb
++
++
++_PROTEINSKETCH_JSON_CACHE: dict[str, dict] = {}
++_VOLUME_SKETCH_RAW_POINTS_CACHE: dict[tuple, tuple[np.ndarray, list]] = {}
++
++
++def clear_volume_sketch_cache() -> None:
++    _PROTEINSKETCH_JSON_CACHE.clear()
++    _VOLUME_SKETCH_RAW_POINTS_CACHE.clear()
++
++
++def _volume_sketch_path_key(path) -> str:
++    return str(Path(path).expanduser().resolve())
++
++
++def _import_openvdb_module():
++    return import_openvdb()
++
++
++def load_proteinsketch_json(json_path) -> dict:
++    path = Path(json_path)
++    cache_key = _volume_sketch_path_key(path)
++    cached = _PROTEINSKETCH_JSON_CACHE.get(cache_key)
++    if cached is not None:
++        return cached
++
++    with path.open("r", encoding="utf-8-sig") as handle:
++        payload = json.load(handle)
++    if not isinstance(payload, dict):
++        raise ValueError(f"ProteinSketch JSON root must be an object: {path}")
++    if payload.get("format") != "ProteinSketchOutput":
++        raise ValueError(f"Input JSON is not a ProteinSketchOutput file: {path}")
++
++    _PROTEINSKETCH_JSON_CACHE[cache_key] = payload
++    return payload
++
++
++def _proteinsketch_section_items(payload: dict, section: str) -> list[dict]:
++    value = payload.get(section)
++    if value is None:
++        return []
++    if not isinstance(value, list):
++        raise ValueError(f"ProteinSketch JSON section {section!r} must be a list or null")
++    return [item for item in value if isinstance(item, dict)]
++
++
++def proteinsketch_section_items(json_path, section: str) -> list[dict]:
++    return _proteinsketch_section_items(load_proteinsketch_json(json_path), section)
++
++
++def proteinsketch_has_section(json_path, section: str) -> bool:
++    return len(proteinsketch_section_items(json_path, section)) > 0
++
++
++def _proteinsketch_item_text(item: dict, section: str, json_path) -> str:
++    if "data" not in item:
++        raise ValueError(f"ProteinSketch JSON {section} entry has no PDB data: {json_path}")
++    text = item["data"]
++    encoding = str(item.get("encoding", "utf-8")).lower()
++    if encoding == "base64":
++        text = base64.b64decode(text).decode("utf-8")
++    if not isinstance(text, str) or "ATOM" not in text:
++        raise ValueError(f"ProteinSketch JSON {section} entry is not PDB text: {json_path}")
++    return text if text.endswith("\n") else text + "\n"
++
++
++def proteinsketch_pdb_text(json_path, section: str, index: int = 0) -> str:
++    items = proteinsketch_section_items(json_path, section)
++    if index < 0 or index >= len(items):
++        raise ValueError(f"ProteinSketch JSON has no {section}[{index}] entry: {json_path}")
++    item = items[index]
++    if str(item.get("format", "PDB")).upper() != "PDB":
++        raise ValueError(f"ProteinSketch JSON {section}[{index}] is not PDB format: {json_path}")
++    return _proteinsketch_item_text(item, section, json_path)
++
++
++def _atom_line_with_chain(line: str, chain_id: str, resseq: int | None = None, serial: int | None = None) -> str:
++    if not line.startswith(("ATOM  ", "HETATM")):
++        return line
++    chars = list(line.rstrip("\n").ljust(80))
++    if serial is not None:
++        chars[6:11] = list(f"{serial:5d}"[-5:])
++    chars[21] = chain_id
++    if resseq is not None:
++        chars[22:26] = list(f"{resseq:4d}"[-4:])
++    return "".join(chars).rstrip()
++
++
++def _rewrite_pdb_text(text: str, *, chain_id: str | None = None, renumber: bool = False, serial_start: int = 1):
++    residue_map: dict[tuple[str, int, str], int] = {}
++    next_resseq = 1
++    serial = int(serial_start)
++    lines = []
++    for raw in text.splitlines():
++        if not raw.startswith(("ATOM  ", "HETATM")):
++            continue
++        old_chain = raw[21:22].strip() or "A"
++        old_resseq = int(raw[22:26].strip())
++        old_icode = raw[26:27]
++        key = (old_chain, old_resseq, old_icode)
++        new_resseq = None
++        if renumber:
++            if key not in residue_map:
++                residue_map[key] = next_resseq
++                next_resseq += 1
++            new_resseq = residue_map[key]
++        lines.append(_atom_line_with_chain(raw, chain_id or old_chain, new_resseq, serial))
++        serial += 1
++    if not lines:
++        raise ValueError("ProteinSketch PDB text has no ATOM/HETATM rows")
++    count = len(residue_map) if renumber else len({line[21:26] for line in lines})
++    return "\n".join(lines) + "\nEND\n", count
++
++
++def write_proteinsketch_pdb(json_path, section: str, output_path, *, chain_id: str | None = None, renumber: bool = False) -> Path:
++    text = proteinsketch_pdb_text(json_path, section)
++    rewritten, _count = _rewrite_pdb_text(text, chain_id=chain_id, renumber=renumber)
++    path = Path(output_path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(rewritten, encoding="utf-8")
++    return path
++
++
++def write_proteinsketch_complex_pdb(json_path, output_path, *, backbone_chain: str = "Z") -> tuple[Path, int]:
++    backbone_text = proteinsketch_pdb_text(json_path, "backbone")
++    target_text = proteinsketch_pdb_text(json_path, "target")
++    backbone_rewritten, backbone_len = _rewrite_pdb_text(
++        backbone_text,
++        chain_id=backbone_chain,
++        renumber=True,
++        serial_start=1,
++    )
++    backbone_lines = [line for line in backbone_rewritten.splitlines() if line.startswith(("ATOM  ", "HETATM"))]
++    target_rewritten, _target_len = _rewrite_pdb_text(
++        target_text,
++        chain_id=None,
++        renumber=False,
++        serial_start=len(backbone_lines) + 1,
++    )
++    target_lines = [line for line in target_rewritten.splitlines() if line.startswith(("ATOM  ", "HETATM"))]
++    path = Path(output_path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text("\n".join([*backbone_lines, *target_lines]) + "\nEND\n", encoding="utf-8")
++    return path, backbone_len
++
++
++def proteinsketch_pdb_length(json_path, section: str) -> int:
++    text = proteinsketch_pdb_text(json_path, section)
++    _rewritten, count = _rewrite_pdb_text(text, chain_id=None, renumber=True)
++    return count
++
++
++def proteinsketch_target_hotspots(json_path) -> list[str]:
++    items = proteinsketch_section_items(json_path, "target")
++    if not items:
++        return []
++    hotspots = items[0].get("hotspots", [])
++    if hotspots is None:
++        return []
++    return [str(item) for item in hotspots]
++
++
++def proteinsketch_volume_length_range(json_path, volume_index: int = 0) -> Optional[str]:
++    items = proteinsketch_section_items(json_path, "volume")
++    if volume_index < 0 or volume_index >= len(items):
++        return None
++    value = items[volume_index].get("estimatedResidueCountRange")
++    if isinstance(value, dict) and "min" in value and "max" in value:
++        return f"{int(value['min'])}-{int(value['max'])}"
++    return None
++
++
++def proteinsketch_mode(json_path) -> str:
++    has_target = proteinsketch_has_section(json_path, "target")
++    has_backbone = proteinsketch_has_section(json_path, "backbone")
++    has_volume = proteinsketch_has_section(json_path, "volume")
++    if has_target and has_backbone:
++        return "binder_partial"
++    if has_backbone:
++        return "monomer_partial"
++    if has_target and has_volume:
++        return "binder"
++    if has_volume:
++        return "monomer"
++    raise ValueError(f"ProteinSketch JSON has no usable target/backbone/volume input: {json_path}")
++
++
++def protein_contig_ranges(pdb_path) -> list[str]:
++    if pdb_path is None:
++        return []
++
++    path = Path(pdb_path)
++    chain_order: list[str] = []
++    residues_by_chain: dict[str, set[int]] = {}
++    with path.open("r", encoding="utf-8") as handle:
++        for line in handle:
++            if line[:4] != "ATOM" or line[12:16].strip() != "CA":
++                continue
++            chain = line[21:22].strip()
++            if not chain:
++                raise ValueError(f"Blank chain ID in protein residue row: {line.rstrip()}")
++            resnum = int(line[22:26].strip())
++            if chain not in residues_by_chain:
++                residues_by_chain[chain] = set()
++                chain_order.append(chain)
++            residues_by_chain[chain].add(resnum)
++
++    ranges: list[str] = []
++    for chain in chain_order:
++        residues = sorted(residues_by_chain[chain])
++        if not residues:
++            continue
++        start = prev = residues[0]
++        for resnum in residues[1:]:
++            if resnum == prev + 1:
++                prev = resnum
++                continue
++            ranges.append(f"{chain}{start}-{prev}")
++            start = prev = resnum
++        ranges.append(f"{chain}{start}-{prev}")
++    return ranges
++
++
++def _proteinsketch_vdb_payload(json_path, volume_index: int = 0) -> dict:
++    volume_items = proteinsketch_section_items(json_path, "volume")
++    if volume_index < 0 or volume_index >= len(volume_items):
++        raise ValueError(f"ProteinSketch JSON has no volume[{volume_index}] object: {json_path}")
++    vdb_payload = volume_items[volume_index]
++    if vdb_payload.get("format") != "OpenVDB":
++        raise ValueError(f"ProteinSketch JSON volume[{volume_index}] is not OpenVDB data: {json_path}")
++    if vdb_payload.get("encoding") != "base64":
++        raise ValueError(f"ProteinSketch JSON volume[{volume_index}].encoding must be base64: {json_path}")
++    return vdb_payload
++
++
++def validate_proteinsketch_volume_json(json_path, volume_index: int = 0) -> None:
++    _proteinsketch_vdb_payload(json_path, volume_index=volume_index)
++
++
++def _extract_vdb_bytes_from_proteinsketch_json(json_path, volume_index: int = 0) -> bytes:
++    vdb_payload = _proteinsketch_vdb_payload(json_path, volume_index=volume_index)
++    data = vdb_payload.get("data")
++    if not isinstance(data, str) or not data.strip():
++        raise ValueError(f"ProteinSketch JSON has empty volume[{volume_index}].data: {json_path}")
++    return base64.b64decode(data)
++
++
++def _read_vdb_grids_from_json(json_path, volume_index: int = 0):
++    vdb = _import_openvdb_module()
++    raw = _extract_vdb_bytes_from_proteinsketch_json(json_path, volume_index=volume_index)
++    fd, tmp_path = tempfile.mkstemp(suffix=".vdb")
++    os.close(fd)
++    try:
++        with open(tmp_path, "wb") as handle:
++            handle.write(raw)
++        grids, _metadata = vdb.readAll(tmp_path)
++    finally:
++        try:
++            os.unlink(tmp_path)
++        except OSError:
++            pass
++    return list(grids)
++
++
++def _choose_vdb_grid(json_path, grid_name=None, volume_index: int = 0):
++    grids = _read_vdb_grids_from_json(json_path, volume_index=volume_index)
++    if not grids:
++        raise ValueError(f"No grids found in ProteinSketch VDB JSON: {json_path}")
++
++    requested = grid_name or _proteinsketch_vdb_payload(json_path, volume_index=volume_index).get("gridName")
++    if requested:
++        for grid in grids:
++            if getattr(grid, "name", "") == requested:
++                return grid
++        raise ValueError(f"Grid {requested!r} not found in ProteinSketch VDB JSON: {json_path}")
++    return grids[0]
++
++
++def _coord3(value) -> tuple[int, int, int]:
++    return (int(value[0]), int(value[1]), int(value[2]))
++
++
++def _vdb_item_field(item, key: str):
++    if hasattr(item, key):
++        return getattr(item, key)
++    return item[key]
++
++
++def _iter_vdb_item_coords(item):
++    min_coord = _coord3(_vdb_item_field(item, "min"))
++    max_coord = _coord3(_vdb_item_field(item, "max"))
++    for z in range(min_coord[2], max_coord[2] + 1):
++        for y in range(min_coord[1], max_coord[1] + 1):
++            for x in range(min_coord[0], max_coord[0] + 1):
++                yield (x, y, z)
++
++
++def _default_vdb_min_sdf(cutoff) -> float:
++    return -1.0 if cutoff is None else float(cutoff)
++
++
++def _default_vdb_max_sdf(max_sdf) -> float:
++    return 0.0 if max_sdf is None else float(max_sdf)
++
++
++@dataclass(frozen=True)
++class SketchVDBGrid:
++    json_path: str
++    grid_name: str
++    volume_index: int
++    min_sdf: float
++    max_sdf: float
++    shell_points: np.ndarray
++    shell_sdf: np.ndarray
++    shell_index_coords: np.ndarray
++    grid: object
++    shift: np.ndarray
++
++    @property
++    def backend(self) -> str:
++        return "vdb"
++
++    @property
++    def kind(self) -> str:
++        return "vdb"
++
++    @property
++    def label(self) -> str:
++        return self.grid_name or "vdb"
++
++    @property
++    def center(self) -> np.ndarray:
++        if self.shell_points.size == 0:
++            return np.zeros(3, dtype=np.float32)
++        return self.shell_points.mean(axis=0).astype(np.float32)
++
++    @property
++    def radius(self) -> float:
++        if self.shell_points.size == 0:
++            return 0.0
++        center = self.center
++        return float(np.linalg.norm(self.shell_points - center[None, :], axis=1).max())
++
++    @property
++    def geometries(self):
++        return [self]
++
++
++def _vdb_shell_grid(json_path, cutoff=None, max_sdf=None, grid_name=None, volume_index: int = 0) -> SketchVDBGrid:
++    min_sdf = _default_vdb_min_sdf(cutoff)
++    max_sdf = _default_vdb_max_sdf(max_sdf)
++    if min_sdf > max_sdf:
++        raise ValueError(f"VDB min_sdf must be <= max_sdf; got {min_sdf} > {max_sdf}")
++
++    grid = _choose_vdb_grid(json_path, grid_name=grid_name, volume_index=volume_index)
++    points: list[tuple[float, float, float]] = []
++    values: list[float] = []
++    index_coords: list[tuple[int, int, int]] = []
++    transform = grid.transform
++    for item in grid.iterOnValues():
++        value = float(_vdb_item_field(item, "value"))
++        if value < min_sdf or value > max_sdf:
++            continue
++        for coord in _iter_vdb_item_coords(item):
++            world = transform.indexToWorld(coord)
++            points.append((float(world[0]), float(world[1]), float(world[2])))
++            values.append(value)
++            index_coords.append(coord)
++
++    return SketchVDBGrid(
++        json_path=_volume_sketch_path_key(json_path),
++        grid_name=str(getattr(grid, "name", "")),
++        volume_index=int(volume_index),
++        min_sdf=min_sdf,
++        max_sdf=max_sdf,
++        shell_points=np.asarray(points, dtype=np.float32).reshape(-1, 3),
++        shell_sdf=np.asarray(values, dtype=np.float32),
++        shell_index_coords=np.asarray(index_coords, dtype=np.int32).reshape(-1, 3),
++        grid=grid,
++        shift=np.zeros(3, dtype=np.float32),
++    )
++
++
++def _shift_vdb_grid(grid: SketchVDBGrid, shift) -> SketchVDBGrid:
++    shift = np.asarray(shift, dtype=np.float32)
++    return SketchVDBGrid(
++        json_path=grid.json_path,
++        grid_name=grid.grid_name,
++        volume_index=grid.volume_index,
++        min_sdf=grid.min_sdf,
++        max_sdf=grid.max_sdf,
++        shell_points=(grid.shell_points - shift).astype(np.float32),
++        shell_sdf=grid.shell_sdf,
++        shell_index_coords=grid.shell_index_coords,
++        grid=grid.grid,
++        shift=(grid.shift + shift).astype(np.float32),
++    )
++
++
++def _raw_volume_sketch_points(json_path, *, cutoff, max_sdf, volume_index: int) -> tuple[np.ndarray, list]:
++    cache_key = (
++        _volume_sketch_path_key(json_path),
++        "vdb",
++        int(volume_index),
++        None if cutoff is None else float(cutoff),
++        None if max_sdf is None else float(max_sdf),
++    )
++    cached = _VOLUME_SKETCH_RAW_POINTS_CACHE.get(cache_key)
++    if cached is not None:
++        return cached
++
++    grid = _vdb_shell_grid(json_path, cutoff=cutoff, max_sdf=max_sdf, volume_index=int(volume_index))
++    if grid.shell_points.size == 0:
++        raise ValueError(f"No VDB shell points found in ProteinSketch JSON {json_path}")
++    raw = (grid.shell_points.astype(np.float32), [grid])
++    _VOLUME_SKETCH_RAW_POINTS_CACHE[cache_key] = raw
++    return raw
++
++
++def volume_sketch_points(
++    json_path,
++    *,
++    backend="vdb",
++    target_center=None,
++    centered=False,
++    cutoff=None,
++    max_sdf=None,
++    volume_index=0,
++    **_unused,
++) -> tuple[torch.Tensor, list]:
++    backend = str(backend or "vdb").strip().lower()
++    if backend != "vdb":
++        raise ValueError("ProteinSketch JSON branch supports only backend='vdb'")
++
++    shift = np.zeros(3, dtype=np.float32)
++    if target_center is not None:
++        shift = np.asarray(target_center, dtype=np.float32).reshape(-1, 3).mean(axis=0)
++
++    raw_points, raw_geometries = _raw_volume_sketch_points(
++        json_path,
++        cutoff=cutoff,
++        max_sdf=max_sdf,
++        volume_index=int(volume_index),
++    )
++    shifted_points = (raw_points - shift).astype(np.float32)
++    shifted_geometries = [_shift_vdb_grid(geometry, shift) for geometry in raw_geometries]
++
++    if centered:
++        com = shifted_points.mean(axis=0).astype(np.float32)
++        shifted_points = (shifted_points - com).astype(np.float32)
++        shifted_geometries = [_shift_vdb_grid(geometry, com) for geometry in shifted_geometries]
++
++    return torch.from_numpy(shifted_points), shifted_geometries
++
++
++def _as_points_array(points) -> np.ndarray:
++    if isinstance(points, torch.Tensor):
++        points = points.detach().cpu().numpy()
++    return np.asarray(points, dtype=np.float32).reshape(-1, 3)
++
++
++def _vdb_sdf(points: np.ndarray, grid: SketchVDBGrid) -> np.ndarray:
++    coords = _as_points_array(points)
++    shifted = coords + np.asarray(grid.shift, dtype=np.float32)[None, :]
++    accessor = grid.grid.getConstAccessor()
++    values = []
++    for point in shifted:
++        index = grid.grid.transform.worldToIndex(tuple(float(x) for x in point))
++        coord = tuple(int(round(float(index[i]))) for i in range(3))
++        values.append(float(accessor.getValue(coord)))
++    return np.asarray(values, dtype=np.float32)
++
++
++def points_inside_geometries(
++    points,
++    geometries,
++    *,
++    backend=None,
++    max_sdf=None,
++    **_unused,
++) -> np.ndarray:
++    coords = _as_points_array(points)
++    inside = np.zeros(coords.shape[0], dtype=bool)
++    backend = None if backend is None else str(backend).strip().lower()
++    if backend not in {None, "vdb"}:
++        raise ValueError("ProteinSketch JSON branch supports only backend='vdb'")
++    for geometry in geometries:
++        if not isinstance(geometry, SketchVDBGrid):
++            raise TypeError(f"Unknown ProteinSketch geometry: {geometry!r}")
++        inside |= _vdb_sdf(coords, geometry) <= _default_vdb_max_sdf(max_sdf)
++    return inside
++
++
++def write_volume_shell_points_pdb(
++    pdb_path,
++    points,
++    geometries,
++    *,
++    chain_id: str = "V",
++) -> Path:
++    path = Path(pdb_path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    coords = _as_points_array(points)
++    if not geometries:
++        raise ValueError("At least one VDB geometry is required to write shell points")
++
++    grid_counts = [len(getattr(geometry, "shell_points", [])) for geometry in geometries]
++    if sum(grid_counts) == len(coords) and all(count > 0 for count in grid_counts):
++        point_geometry_indices = []
++        for idx, count in enumerate(grid_counts):
++            point_geometry_indices.extend([idx] * count)
++    else:
++        point_geometry_indices = [0 for _ in range(len(coords))]
++
++    chain = (str(chain_id).strip() or "V")[0]
++    with path.open("w", encoding="utf-8") as handle:
++        handle.write("REMARK PROTEINSKETCH_VDB_SHELL_POINTS\n")
++        for i, geometry in enumerate(geometries, start=1):
++            handle.write(
++                "REMARK PROTEINSKETCH_VDB_GEOMETRY "
++                f"{i} grid_name={geometry.grid_name} volume_index={geometry.volume_index} "
++                f"min_sdf={geometry.min_sdf:.3f} max_sdf={geometry.max_sdf:.3f}\n"
++            )
++        for point_idx, (x, y, z) in enumerate(coords, start=1):
++            geometry_idx = point_geometry_indices[point_idx - 1]
++            geometry = geometries[geometry_idx]
++            serial = point_idx if point_idx <= 99999 else ((point_idx - 1) % 99999) + 1
++            resseq = geometry_idx + 1
++            handle.write(
++                f"HETATM{serial:5d}  SPH VSP {chain}{resseq:4d}    "
++                f"{x:8.3f}{y:8.3f}{z:8.3f}"
++                f"{1.00:6.2f}{float(geometry.radius):6.2f}          C\n"
++            )
++        handle.write("END\n")
++    return path
+diff --git a/scripts/run_inference.py b/scripts/run_inference.py
+index 3ebb5e3..171b5bd 100755
+--- a/scripts/run_inference.py
++++ b/scripts/run_inference.py
+@@ -16,7 +16,17 @@ See https://hydra.cc/docs/advanced/hydra-command-line-flags/ for more options.
+ """
+ 
+ import re
+-import os, time, pickle
++import os, sys, time, pickle
++
++SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
++REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
++if REPO_ROOT not in sys.path:
++    sys.path.insert(0, REPO_ROOT)
++
++from rfdiffusion.openvdb_compat import preload_openvdb
++
++preload_openvdb()
++
+ import torch
+ from omegaconf import OmegaConf
+ import hydra
+@@ -68,6 +78,8 @@ def main(conf: HydraConfig) -> None:
+             indices.append(int(m))
+         design_startnum = max(indices) + 1
+ 
++    volume_sketch_points_written = False
++
+     for i_des in range(design_startnum, design_startnum + sampler.inf_conf.num_designs):
+         if conf.inference.deterministic:
+             make_deterministic(i_des)
+@@ -82,6 +94,9 @@ def main(conf: HydraConfig) -> None:
+             continue
+ 
+         x_init, seq_init = sampler.sample_init()
++        if not volume_sketch_points_written:
++            iu.write_volume_sketch_points_if_requested(sampler)
++            volume_sketch_points_written = True
+         denoised_xyz_stack = []
+         px0_xyz_stack = []
+         seq_stack = []
+@@ -139,9 +154,9 @@ def main(conf: HydraConfig) -> None:
+             denoised_xyz_stack[0, :, :4],
+             final_seq,
+             sampler.binderlen,
+-            chain_idx=sampler.chain_idx,
++            chain_idx=getattr(sampler, "chain_idx", None),
+             bfacts=bfacts,
+-            idx_pdb=sampler.idx_pdb
++            idx_pdb=getattr(sampler, "idx_pdb", None)
+         )
+ 
+         # run metadata
+@@ -174,7 +189,7 @@ def main(conf: HydraConfig) -> None:
+                 final_seq.squeeze(),
+                 use_hydrogens=False,
+                 backbone_only=False,
+-                chain_ids=sampler.chain_idx,
++                chain_ids=getattr(sampler, "chain_idx", None),
+             )
+ 
+             out = f"{traj_prefix}_pX0_traj.pdb"
+@@ -185,7 +200,7 @@ def main(conf: HydraConfig) -> None:
+                 final_seq.squeeze(),
+                 use_hydrogens=False,
+                 backbone_only=False,
+-                chain_ids=sampler.chain_idx,
++                chain_ids=getattr(sampler, "chain_idx", None),
+             )
+ 
+         if conf.inference.empty_cache_per_design and torch.cuda.is_available():
+diff --git a/scripts/two-step/pdb_utils.py b/scripts/two-step/pdb_utils.py
+new file mode 100644
+index 0000000..702a4fe
+--- /dev/null
++++ b/scripts/two-step/pdb_utils.py
+@@ -0,0 +1,240 @@
++from __future__ import annotations
++
++import math
++from pathlib import Path
++from typing import Dict, Iterable, List, Sequence, Tuple
++
++import torch
++
++AtomCoord = Tuple[float, float, float]
++
++
++def iter_atom_lines(path: Path) -> Iterable[str]:
++    with path.open("r", encoding="utf-8") as handle:
++        for line in handle:
++            if line.startswith(("ATOM", "HETATM")):
++                yield line.rstrip("\n")
++
++
++def atom_name(line: str) -> str:
++    return line[12:16]
++
++
++def pdb_chain(line: str) -> str:
++    return line[21]
++
++
++def pdb_resseq(line: str) -> int:
++    return int(line[22:26])
++
++
++def pdb_icode(line: str) -> str:
++    return line[26]
++
++
++def pdb_xyz(line: str) -> AtomCoord:
++    return (float(line[30:38]), float(line[38:46]), float(line[46:54]))
++
++
++def pdb_chain_xyz(
++    pdb_path: Path, allowed_atom_names: set[str], chain_id: str | None = None
++) -> torch.Tensor:
++    coords: list[list[float]] = []
++    for line in iter_atom_lines(pdb_path):
++        if chain_id is not None and pdb_chain(line) != chain_id:
++            continue
++        if atom_name(line).strip() not in allowed_atom_names:
++            continue
++        coords.append(list(pdb_xyz(line)))
++    if not coords:
++        return torch.empty((0, 3), dtype=torch.float32)
++    return torch.tensor(coords, dtype=torch.float32)
++
++
++def chamfer_distance(p: torch.Tensor, q: torch.Tensor) -> float:
++    dist = torch.cdist(p, q)
++    return float(dist.min(dim=1).values.mean() + dist.min(dim=0).values.mean())
++
++
++def ordered_target_residue_keys(target_pdb: Path) -> list[tuple[str, int, str]]:
++    residue_keys: list[tuple[str, int, str]] = []
++    seen: set[tuple[str, int, str]] = set()
++    for line in iter_atom_lines(target_pdb):
++        key = (pdb_chain(line), pdb_resseq(line), pdb_icode(line))
++        if key in seen:
++            continue
++        seen.add(key)
++        residue_keys.append(key)
++    return residue_keys
++
++
++def detect_target_contig(target_pdb: Path, target_chain_out: str) -> str:
++    residue_keys = ordered_target_residue_keys(target_pdb)
++    if not residue_keys:
++        raise ValueError(f"No ATOM/HETATM residues found in target PDB: {target_pdb}")
++    return f"{target_chain_out}1-{len(residue_keys)}"
++
++
++def detect_monomer_length(monomer_pdb: Path, preferred_chain: str = "A") -> int:
++    residues_by_chain: Dict[str, set[tuple[int, str]]] = {}
++    for line in iter_atom_lines(monomer_pdb):
++        if atom_name(line) != " CA ":
++            continue
++        chain = pdb_chain(line)
++        residues_by_chain.setdefault(chain, set()).add((pdb_resseq(line), pdb_icode(line)))
++
++    if not residues_by_chain:
++        raise ValueError(f"No CA atoms found in monomer PDB: {monomer_pdb}")
++    if preferred_chain in residues_by_chain and residues_by_chain[preferred_chain]:
++        return len(residues_by_chain[preferred_chain])
++    if len(residues_by_chain) == 1:
++        return len(next(iter(residues_by_chain.values())))
++
++    chains = ", ".join(repr(c) for c in sorted(residues_by_chain))
++    raise ValueError(
++        f"Unable to infer monomer length from chain '{preferred_chain}' in {monomer_pdb}. "
++        f"Available chains: {chains}"
++    )
++
++
++def shift_coord(coord: AtomCoord, coord_shift: AtomCoord | None) -> AtomCoord:
++    if coord_shift is None:
++        return coord
++    dx, dy, dz = coord_shift
++    x, y, z = coord
++    return (x + dx, y + dy, z + dz)
++
++
++def pdb_round_coord(coord: AtomCoord) -> AtomCoord:
++    x, y, z = coord
++    return (float(f"{x:8.3f}"), float(f"{y:8.3f}"), float(f"{z:8.3f}"))
++
++
++def rewrite_atom_line(
++    line: str,
++    serial: int,
++    *,
++    chain_override: str | None = None,
++    coord_shift: AtomCoord | None = None,
++    resseq_override: int | None = None,
++    icode_override: str | None = None,
++) -> str:
++    base = line.rstrip("\n")
++    if len(base) < 80:
++        base = base.ljust(80)
++
++    if coord_shift is not None:
++        x, y, z = shift_coord(pdb_xyz(base), coord_shift)
++        base = f"{base[:30]}{x:8.3f}{y:8.3f}{z:8.3f}{base[54:80]}"
++
++    chain = chain_override if chain_override is not None else base[21]
++    updated = f"{base[:6]}{serial:5d}{base[11:21]}{chain}{base[22:80]}"
++
++    if resseq_override is None and icode_override is None:
++        return updated + "\n"
++    if resseq_override is not None and not (1 <= resseq_override <= 9999):
++        raise ValueError(f"Residue index exceeds PDB field width: {resseq_override}")
++
++    icode = updated[26] if icode_override is None else icode_override
++    if len(icode) != 1:
++        raise ValueError(f"Insertion code override must be one character: {icode!r}")
++    resseq = updated[22:26] if resseq_override is None else f"{resseq_override:4d}"
++    return f"{updated[:22]}{resseq}{icode}{updated[27:]}\n"
++
++
++def write_intermediate(
++    monomer_pdb: Path,
++    target_pdb: Path,
++    out_pdb: Path,
++    target_chain_out: str,
++    monomer_coord_shift: AtomCoord | None = None,
++) -> None:
++    monomer_atoms = list(iter_atom_lines(monomer_pdb))
++    target_atoms = list(iter_atom_lines(target_pdb))
++    if not monomer_atoms:
++        raise ValueError(f"No ATOM/HETATM lines found in monomer PDB: {monomer_pdb}")
++    if not target_atoms:
++        raise ValueError(f"No ATOM/HETATM lines found in target PDB: {target_pdb}")
++
++    target_residue_index: dict[tuple[str, int, str], int] = {}
++    next_target_resseq = 1
++    serial = 1
++
++    out_pdb.parent.mkdir(parents=True, exist_ok=True)
++    with out_pdb.open("w", encoding="utf-8") as handle:
++        for line in monomer_atoms:
++            handle.write(rewrite_atom_line(line, serial, coord_shift=monomer_coord_shift))
++            serial += 1
++        handle.write("TER\n")
++        for line in target_atoms:
++            residue_key = (pdb_chain(line), pdb_resseq(line), pdb_icode(line))
++            if residue_key not in target_residue_index:
++                target_residue_index[residue_key] = next_target_resseq
++                next_target_resseq += 1
++            handle.write(
++                rewrite_atom_line(
++                    line,
++                    serial,
++                    chain_override=target_chain_out,
++                    resseq_override=target_residue_index[residue_key],
++                    icode_override=" ",
++                )
++            )
++            serial += 1
++        handle.write("TER\nEND\n")
++
++
++def read_all_atom_coords(path: Path) -> List[AtomCoord]:
++    return [pdb_xyz(line) for line in iter_atom_lines(path)]
++
++
++def read_intermediate_sections(path: Path) -> tuple[list[AtomCoord], list[AtomCoord]]:
++    monomer_coords: list[AtomCoord] = []
++    target_coords: list[AtomCoord] = []
++    section = 0
++    with path.open("r", encoding="utf-8") as handle:
++        for raw in handle:
++            line = raw.rstrip("\n")
++            if line.startswith("TER"):
++                section += 1
++                continue
++            if not line.startswith(("ATOM", "HETATM")):
++                continue
++            if section == 0:
++                monomer_coords.append(pdb_xyz(line))
++            elif section == 1:
++                target_coords.append(pdb_xyz(line))
++    return monomer_coords, target_coords
++
++
++def max_coord_delta(a: Sequence[AtomCoord], b: Sequence[AtomCoord]) -> float:
++    if len(a) != len(b):
++        raise ValueError(f"Coordinate list length mismatch: {len(a)} vs {len(b)}")
++    max_delta = 0.0
++    for (ax, ay, az), (bx, by, bz) in zip(a, b):
++        delta = math.sqrt((ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2)
++        max_delta = max(max_delta, delta)
++    return max_delta
++
++
++def validate_intermediate_geometry(
++    monomer_pdb: Path,
++    target_pdb: Path,
++    intermediate_pdb: Path,
++    monomer_coord_shift: AtomCoord | None = None,
++) -> None:
++    src_monomer = read_all_atom_coords(monomer_pdb)
++    src_target = read_all_atom_coords(target_pdb)
++    inter_monomer, inter_target = read_intermediate_sections(intermediate_pdb)
++
++    expected_monomer = [
++        pdb_round_coord(shift_coord(coord, monomer_coord_shift))
++        for coord in src_monomer
++    ]
++    mono_delta = max_coord_delta(expected_monomer, inter_monomer)
++    target_delta = max_coord_delta(src_target, inter_target)
++    if mono_delta != 0.0 or target_delta != 0.0:
++        raise ValueError(
++            f"Coordinate mismatch in {intermediate_pdb}: "
++            f"monomer delta={mono_delta}, target delta={target_delta}"
++        )
+diff --git a/scripts/two-step/rfdiffusion_runner.py b/scripts/two-step/rfdiffusion_runner.py
+new file mode 100644
+index 0000000..f60dcbe
+--- /dev/null
++++ b/scripts/two-step/rfdiffusion_runner.py
+@@ -0,0 +1,263 @@
++from __future__ import annotations
++
++import logging
++import os
++import pickle
++import random
++import time
++from pathlib import Path
++from typing import Callable, List
++
++import numpy as np
++import torch
++from omegaconf import OmegaConf
++
++from rfdiffusion.util import writepdb, writepdb_multi
++
++
++def normalize_contig(contig: str) -> str:
++    value = contig.strip()
++    if value.startswith("[") and value.endswith("]"):
++        return value[1:-1].strip()
++    return value
++
++
++def make_deterministic(seed: int = 0) -> None:
++    torch.manual_seed(seed)
++    np.random.seed(seed)
++    random.seed(seed)
++
++
++def cleanup_monomer_outputs(
++    monomer_output_prefix: Path,
++    design_idx: int,
++    *,
++    remove_trajectory: bool,
++) -> None:
++    base = Path(f"{monomer_output_prefix}_{design_idx}")
++    to_remove = [Path(f"{base}.pdb"), Path(f"{base}.trb")]
++    if remove_trajectory:
++        traj_prefix = base.parent / "traj" / base.name
++        to_remove.extend(
++            [
++                Path(f"{traj_prefix}_Xt-1_traj.pdb"),
++                Path(f"{traj_prefix}_pX0_traj.pdb"),
++            ]
++        )
++
++    for path in to_remove:
++        if path.exists():
++            path.unlink()
++
++
++def run_single_design(
++    sampler,
++    out_prefix: str,
++    after_sample_init: Callable[[object, str], None] | None = None,
++) -> None:
++    start_time = time.time()
++
++    x_init, seq_init = sampler.sample_init()
++    if after_sample_init is not None:
++        after_sample_init(sampler, out_prefix)
++    denoised_xyz_stack = []
++    px0_xyz_stack = []
++    seq_stack = []
++    plddt_stack = []
++
++    x_t = torch.clone(x_init)
++    seq_t = torch.clone(seq_init)
++
++    for t in range(int(sampler.t_step_input), sampler.inf_conf.final_step - 1, -1):
++        px0, x_t, seq_t, plddt = sampler.sample_step(
++            t=t, x_t=x_t, seq_init=seq_t, final_step=sampler.inf_conf.final_step
++        )
++        px0_xyz_stack.append(px0)
++        denoised_xyz_stack.append(x_t)
++        seq_stack.append(seq_t)
++        plddt_stack.append(plddt[0])
++
++    denoised_xyz_stack = torch.flip(torch.stack(denoised_xyz_stack), [0])
++    px0_xyz_stack = torch.flip(torch.stack(px0_xyz_stack), [0])
++    plddt_stack = torch.stack(plddt_stack)
++
++    out_path = Path(out_prefix)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++
++    final_seq = torch.where(
++        torch.argmax(seq_init, dim=-1) == 21, 7, torch.argmax(seq_init, dim=-1)
++    )
++    bfacts = torch.ones_like(final_seq.squeeze())
++    bfacts[torch.where(torch.argmax(seq_init, dim=-1) == 21, True, False)] = 0
++
++    writepdb(
++        f"{out_prefix}.pdb",
++        denoised_xyz_stack[0, :, :4],
++        final_seq,
++        sampler.binderlen,
++        chain_idx=sampler.chain_idx,
++        bfacts=bfacts,
++        idx_pdb=sampler.idx_pdb,
++    )
++
++    trb = dict(
++        config=OmegaConf.to_container(sampler._conf, resolve=True),
++        plddt=plddt_stack.cpu().numpy(),
++        device=torch.cuda.get_device_name(torch.cuda.current_device())
++        if torch.cuda.is_available()
++        else "CPU",
++        time=time.time() - start_time,
++    )
++    if hasattr(sampler, "contig_map"):
++        trb.update(sampler.contig_map.get_mappings())
++    with open(f"{out_prefix}.trb", "wb") as f_out:
++        pickle.dump(trb, f_out)
++
++    if sampler.inf_conf.write_trajectory:
++        traj_prefix = out_path.parent / "traj" / out_path.name
++        traj_prefix.parent.mkdir(parents=True, exist_ok=True)
++        writepdb_multi(
++            f"{traj_prefix}_Xt-1_traj.pdb",
++            denoised_xyz_stack,
++            bfacts,
++            final_seq.squeeze(),
++            use_hydrogens=False,
++            backbone_only=False,
++            chain_ids=sampler.chain_idx,
++        )
++        writepdb_multi(
++            f"{traj_prefix}_pX0_traj.pdb",
++            px0_xyz_stack,
++            bfacts,
++            final_seq.squeeze(),
++            use_hydrogens=False,
++            backbone_only=False,
++            chain_ids=sampler.chain_idx,
++        )
++
++
++def run_stage(
++    sampler,
++    deterministic: bool,
++    start_idx: int,
++    num_designs: int,
++    after_sample_init: Callable[[object, int, str], None] | None = None,
++) -> List[Path]:
++    outputs: List[Path] = []
++    for design_idx in range(start_idx, start_idx + num_designs):
++        if deterministic:
++            make_deterministic(design_idx)
++        out_prefix = f"{sampler.inf_conf.output_prefix}_{design_idx}"
++        output_pdb = Path(out_prefix + ".pdb")
++        if sampler.inf_conf.cautious and output_pdb.exists():
++            logging.getLogger(__name__).info("Skipping existing output: %s", output_pdb)
++            outputs.append(output_pdb)
++            continue
++        hook = None
++        if after_sample_init is not None:
++            hook = lambda current_sampler, current_prefix, idx=design_idx: after_sample_init(
++                current_sampler,
++                idx,
++                current_prefix,
++            )
++        run_single_design(sampler, out_prefix, after_sample_init=hook)
++        outputs.append(output_pdb)
++    return outputs
++
++
++def _configure_guide_source(
++    sampler,
++    *,
++    sketch_json: Path | None,
++    volume_sketch_cutoff: float | None,
++    volume_sketch_max_sdf: float | None,
++    sketch_json_volume_index: int,
++) -> None:
++    if sketch_json is None:
++        raise ValueError("Two-step ProteinSketch inference requires sketch_json")
++
++    sampler.inf_conf.sketch_json = None if sketch_json is None else str(sketch_json)
++    sampler.inf_conf.volume_sketch_cutoff = volume_sketch_cutoff
++    sampler.inf_conf.volume_sketch_max_sdf = volume_sketch_max_sdf
++    sampler.inf_conf.sketch_json_volume_index = int(sketch_json_volume_index)
++
++
++def configure_monomer_stage(
++    sampler,
++    *,
++    target_pdb: Path,
++    sketch_json: Path | None = None,
++    monomer_contig: str,
++    monomer_output_prefix: Path,
++    num_designs: int,
++    design_startnum: int,
++    write_trajectory: bool,
++    guide_decay: str,
++    monomer_shell_weight: float,
++    monomer_distance_weight: float,
++    volume_sketch_cutoff: float | None = None,
++    volume_sketch_max_sdf: float | None = None,
++    sketch_json_volume_index: int = 0,
++) -> None:
++    sampler.inf_conf.input_pdb = str(target_pdb)
++    sampler.inf_conf.output_prefix = str(monomer_output_prefix)
++    sampler.inf_conf.num_designs = int(num_designs)
++    sampler.inf_conf.design_startnum = int(design_startnum)
++    sampler.inf_conf.write_trajectory = bool(write_trajectory)
++    _configure_guide_source(
++        sampler,
++        sketch_json=sketch_json,
++        volume_sketch_cutoff=volume_sketch_cutoff,
++        volume_sketch_max_sdf=volume_sketch_max_sdf,
++        sketch_json_volume_index=sketch_json_volume_index,
++    )
++
++    sampler.diffuser_conf.partial_T = None
++    sampler.contig_conf.contigs = [normalize_contig(monomer_contig)]
++    sampler.potential_conf.guiding_potentials = [
++        f"type:volume_sketch_monomer_shell_ncontacts,weight:{monomer_shell_weight}",
++        f"type:volume_sketch_shell_nearest_monomer_distance,weight:{monomer_distance_weight}",
++    ]
++    sampler.potential_conf.guide_decay = guide_decay
++
++
++def configure_binder_stage(
++    sampler,
++    *,
++    target_pdb: Path,
++    intermediate_pdb: Path,
++    sketch_json: Path | None = None,
++    binder_contig: str,
++    binder_output_prefix: Path,
++    design_startnum: int,
++    partial_t: int,
++    write_trajectory: bool,
++    guide_decay: str,
++    binder_shell_weight: float,
++    binder_distance_weight: float,
++    interface_weight: float,
++    volume_sketch_cutoff: float | None = None,
++    volume_sketch_max_sdf: float | None = None,
++    sketch_json_volume_index: int = 0,
++) -> None:
++    sampler.inf_conf.input_pdb = str(intermediate_pdb)
++    sampler.inf_conf.output_prefix = str(binder_output_prefix)
++    sampler.inf_conf.num_designs = 1
++    sampler.inf_conf.design_startnum = int(design_startnum)
++    sampler.inf_conf.write_trajectory = bool(write_trajectory)
++    _configure_guide_source(
++        sampler,
++        sketch_json=sketch_json,
++        volume_sketch_cutoff=volume_sketch_cutoff,
++        volume_sketch_max_sdf=volume_sketch_max_sdf,
++        sketch_json_volume_index=sketch_json_volume_index,
++    )
++
++    sampler.diffuser_conf.partial_T = int(partial_t)
++    sampler.contig_conf.contigs = [normalize_contig(binder_contig)]
++    sampler.potential_conf.guiding_potentials = [
++        f"type:volume_sketch_binder_shell_ncontacts,weight:{binder_shell_weight},target_pdb_path:{intermediate_pdb}",
++        f"type:volume_sketch_shell_nearest_binder_distance,weight:{binder_distance_weight},target_pdb_path:{intermediate_pdb}",
++        f"type:interface_ncontacts,weight:{interface_weight}",
++    ]
++    sampler.potential_conf.guide_decay = guide_decay
+diff --git a/scripts/two-step/run_inference_json_twostep.py b/scripts/two-step/run_inference_json_twostep.py
+new file mode 100644
+index 0000000..22da823
+--- /dev/null
++++ b/scripts/two-step/run_inference_json_twostep.py
+@@ -0,0 +1,556 @@
++#!/usr/bin/env python3
++"""ProteinSketch JSON two-step RFdiffusion entrypoint."""
++
++from __future__ import annotations
++
++import argparse
++import logging
++import sys
++from dataclasses import dataclass
++from pathlib import Path
++
++REPO_ROOT = Path(__file__).resolve().parents[2]
++if str(REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(REPO_ROOT))
++
++from rfdiffusion.openvdb_compat import preload_openvdb
++
++preload_openvdb()
++
++import torch
++from omegaconf import OmegaConf
++
++from rfdiffusion import volume_sketch
++from rfdiffusion.inference import utils as iu
++from pdb_utils import (
++    chamfer_distance,
++    detect_monomer_length,
++    detect_target_contig,
++    pdb_chain_xyz,
++    validate_intermediate_geometry,
++    write_intermediate,
++)
++from rfdiffusion_runner import (
++    cleanup_monomer_outputs,
++    configure_binder_stage,
++    configure_monomer_stage,
++    make_deterministic,
++    normalize_contig,
++    run_stage,
++)
++
++
++@dataclass(frozen=True)
++class PipelinePaths:
++    config: Path
++    sketch_json: Path
++    target_pdb: Path
++    outpath: Path
++    monomer_output_prefix: Path
++    binder_output_prefix: Path
++    intermediate_dir: Path
++
++
++def resolve_path(path_str: str) -> Path:
++    return Path(path_str).expanduser().resolve()
++
++
++def resolve_with_outpath(path_str: str, outpath: Path) -> Path:
++    path = Path(path_str).expanduser()
++    if not path.is_absolute():
++        path = outpath / path
++    return path.resolve()
++
++
++def default_outpath(source_path: Path) -> Path:
++    return (Path.cwd() / "outputs" / f"two_step_{source_path.stem}").resolve()
++
++
++def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
++    default_config = REPO_ROOT / "config" / "inference" / "voxel.yaml"
++    parser = argparse.ArgumentParser(
++        description="Run monomer -> intermediate -> binder inference from ProteinSketch JSON.",
++        formatter_class=argparse.RawDescriptionHelpFormatter,
++        epilog=(
++            "Minimal example:\n"
++            "  python scripts/two-step/run_inference_json_twostep.py \\\n"
++            "    inference.sketch_json=proteinsketch.json \\\n"
++            "    inference.output_prefix=outputs/two_step_json/binder \\\n"
++            "    inference.num_designs=10"
++        ),
++    )
++
++    paths = parser.add_argument_group("paths")
++    paths.add_argument("--config", default=str(default_config), help="Inference YAML config")
++    paths.add_argument("--outpath", default=None, help="Default: outputs/two_step_<json_stem>")
++    paths.add_argument("--monomer-output-prefix", default=None, help="Default: <outpath>/monomer")
++    paths.add_argument("--binder-output-prefix", default=None, help="Default: <outpath>/binder")
++    paths.add_argument("--intermediate-dir", default=None, help="Default: <outpath>/intermediate")
++
++    stage = parser.add_argument_group("stage controls")
++    stage.add_argument("--monomer-contig", default=None, help="Default: volume estimatedResidueCountRange")
++    stage.add_argument("--monomer-num-designs", type=int, default=None)
++    stage.add_argument("--monomer-design-startnum", type=int, default=None)
++    stage.add_argument("--partial-T", type=int, default=None)
++    stage.add_argument("--target-chain-out", default="B")
++    stage.add_argument("--deterministic", action=argparse.BooleanOptionalAction, default=None)
++    stage.add_argument("--write-trajectory", action=argparse.BooleanOptionalAction, default=None)
++    stage.add_argument("--skip-monomer-inference", action="store_true")
++    stage.add_argument("--skip-binder-inference", action="store_true")
++    stage.add_argument("--keep-monomer", action="store_true")
++
++    potentials = parser.add_argument_group("potential weights")
++    potentials.add_argument("--monomer-shell-weight", type=float, default=0.1)
++    potentials.add_argument("--monomer-distance-weight", type=float, default=0.001)
++    potentials.add_argument("--binder-shell-weight", type=float, default=0.1)
++    potentials.add_argument("--binder-distance-weight", type=float, default=0.001)
++    potentials.add_argument("--interface-weight", type=float, default=1.0)
++    potentials.add_argument("--guide-decay", default=None)
++
++    sketch = parser.add_argument_group("ProteinSketch VDB options")
++    sketch.add_argument("--volume-sketch-cutoff", type=float, default=None)
++    sketch.add_argument("--volume-sketch-max-sdf", type=float, default=None)
++    sketch.add_argument("--sketch-json-volume-index", type=int, default=None)
++
++    filtering = parser.add_argument_group("monomer filter")
++    filtering.add_argument("--chamfer-cutoff", type=float, default=9.0)
++    filtering.add_argument("--skip-chamfer-filter", action="store_true")
++
++    diagnostics = parser.add_argument_group("diagnostics")
++    diagnostics.add_argument("--no-validate-intermediate", action="store_true")
++    diagnostics.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO")
++    args, overrides = parser.parse_known_args(argv)
++    for override in overrides:
++        if override.startswith("--") or "=" not in override:
++            parser.error(f"unrecognized argument: {override}")
++    args.config_overrides = overrides
++    return args
++
++
++def setup_logging(level: str) -> None:
++    logging.basicConfig(
++        level=getattr(logging, level),
++        format="[%(asctime)s] %(levelname)s: %(message)s",
++        datefmt="%H:%M:%S",
++    )
++
++
++def override_keys(args: argparse.Namespace) -> set[str]:
++    return {item.split("=", 1)[0] for item in getattr(args, "config_overrides", [])}
++
++
++def load_config(args: argparse.Namespace):
++    conf = OmegaConf.load(str(resolve_path(args.config)))
++    if args.config_overrides:
++        conf = OmegaConf.merge(conf, OmegaConf.from_dotlist(args.config_overrides))
++    return conf
++
++
++def cfg_get(conf_node, key: str, default=None):
++    if conf_node is None:
++        return default
++    if hasattr(conf_node, "get"):
++        return conf_node.get(key, default)
++    return getattr(conf_node, key, default)
++
++
++def cli_or_override(
++    args: argparse.Namespace,
++    attr: str,
++    conf_node,
++    conf_key: str,
++    dotted_key: str,
++    default,
++    keys: set[str],
++):
++    value = getattr(args, attr)
++    if value is not None:
++        return value
++    if dotted_key in keys:
++        return cfg_get(conf_node, conf_key, default)
++    return default
++
++
++def apply_effective_options(args: argparse.Namespace, conf, keys: set[str]) -> None:
++    inf_conf = conf.inference
++    args.sketch_json = cfg_get(inf_conf, "sketch_json", None)
++    args.monomer_num_designs = int(
++        cli_or_override(args, "monomer_num_designs", inf_conf, "num_designs", "inference.num_designs", 2, keys)
++    )
++    args.monomer_design_startnum = int(
++        cli_or_override(
++            args,
++            "monomer_design_startnum",
++            inf_conf,
++            "design_startnum",
++            "inference.design_startnum",
++            0,
++            keys,
++        )
++    )
++    args.partial_T = int(
++        cli_or_override(args, "partial_T", conf.diffuser, "partial_T", "diffuser.partial_T", 10, keys)
++    )
++    args.write_trajectory = bool(
++        cli_or_override(
++            args,
++            "write_trajectory",
++            inf_conf,
++            "write_trajectory",
++            "inference.write_trajectory",
++            False,
++            keys,
++        )
++    )
++    args.deterministic = bool(
++        cli_or_override(
++            args,
++            "deterministic",
++            inf_conf,
++            "deterministic",
++            "inference.deterministic",
++            False,
++            keys,
++        )
++    )
++    args.guide_decay = str(
++        cli_or_override(args, "guide_decay", conf.potentials, "guide_decay", "potentials.guide_decay", "linear", keys)
++    )
++    if args.volume_sketch_cutoff is None:
++        args.volume_sketch_cutoff = cfg_get(inf_conf, "volume_sketch_cutoff", None)
++    if args.volume_sketch_cutoff is None:
++        args.volume_sketch_cutoff = -1.0
++    args.volume_sketch_cutoff = float(args.volume_sketch_cutoff)
++
++    if args.volume_sketch_max_sdf is None:
++        args.volume_sketch_max_sdf = cfg_get(inf_conf, "volume_sketch_max_sdf", 0.0)
++    args.volume_sketch_max_sdf = float(args.volume_sketch_max_sdf)
++
++    if args.sketch_json_volume_index is None:
++        args.sketch_json_volume_index = cfg_get(inf_conf, "sketch_json_volume_index", 0)
++    args.sketch_json_volume_index = int(args.sketch_json_volume_index or 0)
++
++
++def validate_args(args: argparse.Namespace) -> None:
++    if not args.sketch_json:
++        raise ValueError("Two-step ProteinSketch inference requires inference.sketch_json")
++    if not volume_sketch.proteinsketch_has_section(args.sketch_json, "target"):
++        raise ValueError("Two-step ProteinSketch JSON requires target[0] PDB data")
++    if not volume_sketch.proteinsketch_has_section(args.sketch_json, "volume"):
++        raise ValueError("Two-step ProteinSketch JSON requires volume[0] OpenVDB data")
++    if args.monomer_num_designs < 1:
++        raise ValueError("--monomer-num-designs must be >= 1")
++    if args.monomer_design_startnum < 0:
++        raise ValueError("--monomer-design-startnum must be >= 0")
++    if args.partial_T < 1:
++        raise ValueError("--partial-T must be >= 1")
++    if args.chamfer_cutoff <= 0:
++        raise ValueError("--chamfer-cutoff must be > 0")
++    if len(args.target_chain_out) != 1:
++        raise ValueError("--target-chain-out must be exactly one character")
++
++
++def resolve_pipeline_paths(args: argparse.Namespace, conf, keys: set[str]) -> PipelinePaths:
++    sketch_json = resolve_path(args.sketch_json)
++    output_prefix = cfg_get(conf.inference, "output_prefix", None)
++    config_binder_prefix = output_prefix if "inference.output_prefix" in keys else None
++    if args.outpath:
++        outpath = resolve_path(args.outpath)
++    elif config_binder_prefix:
++        outpath = resolve_path(str(config_binder_prefix)).parent
++    else:
++        outpath = default_outpath(sketch_json)
++
++    target_pdb = volume_sketch.write_proteinsketch_pdb(
++        sketch_json,
++        "target",
++        outpath / "json_target.pdb",
++        chain_id=None,
++        renumber=False,
++    )
++    return PipelinePaths(
++        config=resolve_path(args.config),
++        sketch_json=sketch_json,
++        target_pdb=target_pdb,
++        outpath=outpath,
++        monomer_output_prefix=(
++            outpath / "monomer"
++            if args.monomer_output_prefix is None
++            else resolve_with_outpath(args.monomer_output_prefix, outpath)
++        ),
++        binder_output_prefix=(
++            resolve_path(str(config_binder_prefix))
++            if args.binder_output_prefix is None and config_binder_prefix
++            else outpath / "binder"
++            if args.binder_output_prefix is None
++            else resolve_with_outpath(args.binder_output_prefix, outpath)
++        ),
++        intermediate_dir=(
++            outpath / "intermediate"
++            if args.intermediate_dir is None
++            else resolve_with_outpath(args.intermediate_dir, outpath)
++        ),
++    )
++
++
++def validate_paths(paths: PipelinePaths) -> None:
++    for label, path in {
++        "config": paths.config,
++        "ProteinSketch JSON": paths.sketch_json,
++        "target PDB": paths.target_pdb,
++    }.items():
++        if not path.exists():
++            raise FileNotFoundError(f"Missing {label}: {path}")
++
++
++def shell_points(
++    args: argparse.Namespace,
++    paths: PipelinePaths,
++    *,
++    centered: bool,
++) -> torch.Tensor:
++    points, _geometries = volume_sketch.volume_sketch_points(
++        paths.sketch_json,
++        cutoff=args.volume_sketch_cutoff,
++        max_sdf=args.volume_sketch_max_sdf,
++        volume_index=args.sketch_json_volume_index,
++        centered=centered,
++    )
++    if points.numel() == 0:
++        raise ValueError(f"No ProteinSketch VDB shell points found in {paths.sketch_json}")
++    return points
++
++
++def compute_shell_com(args: argparse.Namespace, paths: PipelinePaths) -> tuple[float, float, float]:
++    points = shell_points(args, paths, centered=False)
++    com = points.mean(dim=0)
++    return (float(com[0]), float(com[1]), float(com[2]))
++
++
++def prepare_shell_points(args: argparse.Namespace, paths: PipelinePaths) -> torch.Tensor | None:
++    if args.skip_chamfer_filter:
++        logging.info("Chamfer filter disabled.")
++        return None
++    shell_xyz = shell_points(args, paths, centered=True)
++    logging.info(
++        "Chamfer filter: sketch_json=%s n=%d cutoff=%.3f",
++        paths.sketch_json,
++        shell_xyz.shape[0],
++        args.chamfer_cutoff,
++    )
++    return shell_xyz
++
++
++def load_sampler(args: argparse.Namespace, paths: PipelinePaths, conf):
++    conf.inference.deterministic = bool(args.deterministic)
++    conf.inference.write_trajectory = bool(args.write_trajectory)
++    conf.inference.output_prefix = str(paths.monomer_output_prefix)
++    conf.inference.num_designs = int(args.monomer_num_designs)
++    conf.inference.design_startnum = int(args.monomer_design_startnum)
++    conf.inference.sketch_json = None
++    conf.inference.input_pdb = None
++    conf.inference.volume_sketch_cutoff = args.volume_sketch_cutoff
++    conf.inference.volume_sketch_max_sdf = args.volume_sketch_max_sdf
++    conf.inference.sketch_json_volume_index = int(args.sketch_json_volume_index)
++    conf.potentials.guide_decay = args.guide_decay
++
++    if args.deterministic:
++        make_deterministic()
++
++    if torch.cuda.is_available():
++        logging.info("GPU: %s", torch.cuda.get_device_name(torch.cuda.current_device()))
++    else:
++        logging.warning("No GPU detected; running on CPU.")
++
++    sampler = iu.sampler_selector(conf)
++    logging.info("RFdiffusion sampler loaded once.")
++    return sampler
++
++
++def design_volume_sketch_points_path(paths: PipelinePaths, conf, design_idx: int) -> Path:
++    output_path = cfg_get(conf.inference, "volume_sketch_points_path", None)
++    if output_path:
++        output_text = str(output_path)
++        if "{design_idx}" in output_text:
++            return resolve_with_outpath(output_text.format(design_idx=design_idx), paths.outpath)
++        path = resolve_with_outpath(output_text, paths.outpath)
++        return path.with_name(f"{path.stem}_{design_idx}{path.suffix}")
++    return Path(f"{paths.binder_output_prefix}_{design_idx}_volume_sketch_points.pdb")
++
++
++def write_binder_volume_sketch_points_if_requested(sampler, paths: PipelinePaths, conf, design_idx: int) -> Path | None:
++    if not cfg_get(conf.inference, "write_volume_sketch_points", False):
++        return None
++
++    inf_conf = sampler.inf_conf
++    previous_path = cfg_get(inf_conf, "volume_sketch_points_path", None)
++    previous_write = cfg_get(inf_conf, "write_volume_sketch_points", False)
++    inf_conf.write_volume_sketch_points = True
++    inf_conf.volume_sketch_points_path = str(
++        design_volume_sketch_points_path(paths, conf, design_idx)
++    )
++    try:
++        written = iu.write_volume_sketch_points_if_requested(sampler)
++    finally:
++        inf_conf.volume_sketch_points_path = previous_path
++        inf_conf.write_volume_sketch_points = previous_write
++    logging.info("Wrote volume sketch points: %s", written)
++    return written
++
++
++def main() -> None:
++    args = parse_args()
++    setup_logging(args.log_level)
++    conf = load_config(args)
++    keys = override_keys(args)
++    apply_effective_options(args, conf, keys)
++    validate_args(args)
++
++    paths = resolve_pipeline_paths(args, conf, keys)
++    validate_paths(paths)
++    paths.outpath.mkdir(parents=True, exist_ok=True)
++    paths.intermediate_dir.mkdir(parents=True, exist_ok=True)
++    paths.monomer_output_prefix.parent.mkdir(parents=True, exist_ok=True)
++    paths.binder_output_prefix.parent.mkdir(parents=True, exist_ok=True)
++
++    if args.monomer_contig:
++        monomer_contig = args.monomer_contig
++    else:
++        length_range = volume_sketch.proteinsketch_volume_length_range(
++            paths.sketch_json,
++            volume_index=args.sketch_json_volume_index,
++        )
++        if length_range is None:
++            raise ValueError("ProteinSketch JSON volume requires estimatedResidueCountRange or --monomer-contig")
++        monomer_contig = f"[{length_range}]"
++    logging.info("Output directory: %s", paths.outpath)
++    logging.info("Monomer contig: %s", normalize_contig(monomer_contig))
++
++    monomer_coord_shift = compute_shell_com(args, paths)
++    logging.info("Monomer back-translation delta: %.3f %.3f %.3f", *monomer_coord_shift)
++
++    sampler = load_sampler(args, paths, conf)
++    configure_monomer_stage(
++        sampler,
++        target_pdb=paths.target_pdb,
++        sketch_json=paths.sketch_json,
++        monomer_contig=monomer_contig,
++        monomer_output_prefix=paths.monomer_output_prefix,
++        num_designs=args.monomer_num_designs,
++        design_startnum=args.monomer_design_startnum,
++        write_trajectory=args.write_trajectory,
++        guide_decay=args.guide_decay,
++        monomer_shell_weight=args.monomer_shell_weight,
++        monomer_distance_weight=args.monomer_distance_weight,
++        volume_sketch_cutoff=args.volume_sketch_cutoff,
++        volume_sketch_max_sdf=args.volume_sketch_max_sdf,
++        sketch_json_volume_index=args.sketch_json_volume_index,
++    )
++
++    if args.skip_monomer_inference:
++        logging.info("Skipping monomer stage.")
++    else:
++        logging.info("Running monomer stage.")
++        run_stage(
++            sampler,
++            deterministic=args.deterministic,
++            start_idx=args.monomer_design_startnum,
++            num_designs=args.monomer_num_designs,
++        )
++
++    target_contig = detect_target_contig(paths.target_pdb, args.target_chain_out)
++    shell_xyz = prepare_shell_points(args, paths)
++    kept = 0
++    skipped = 0
++
++    start = args.monomer_design_startnum
++    stop = start + args.monomer_num_designs
++    for design_idx in range(start, stop):
++        monomer_pdb = Path(f"{paths.monomer_output_prefix}_{design_idx}.pdb")
++        if not monomer_pdb.exists():
++            raise FileNotFoundError(f"Expected monomer PDB not found: {monomer_pdb}")
++
++        if shell_xyz is not None:
++            monomer_xyz = pdb_chain_xyz(monomer_pdb, {"CA"}, chain_id="A")
++            if monomer_xyz.numel() == 0:
++                raise ValueError(f"No chain-A CA atoms parsed from {monomer_pdb}")
++            cd = chamfer_distance(monomer_xyz, shell_xyz)
++            if cd >= args.chamfer_cutoff:
++                logging.info("Skipping %d: chamfer %.3f >= %.3f", design_idx, cd, args.chamfer_cutoff)
++                skipped += 1
++                if not args.keep_monomer:
++                    cleanup_monomer_outputs(
++                        paths.monomer_output_prefix,
++                        design_idx,
++                        remove_trajectory=args.write_trajectory,
++                    )
++                continue
++            kept += 1
++            logging.info("Keeping %d: chamfer %.3f < %.3f", design_idx, cd, args.chamfer_cutoff)
++
++        intermediate_pdb = paths.intermediate_dir / f"intermediate_{design_idx}.pdb"
++        write_intermediate(
++            monomer_pdb=monomer_pdb,
++            target_pdb=paths.target_pdb,
++            out_pdb=intermediate_pdb,
++            target_chain_out=args.target_chain_out,
++            monomer_coord_shift=monomer_coord_shift,
++        )
++        if not args.no_validate_intermediate:
++            validate_intermediate_geometry(
++                monomer_pdb,
++                paths.target_pdb,
++                intermediate_pdb,
++                monomer_coord_shift,
++            )
++
++        monomer_len = detect_monomer_length(monomer_pdb, preferred_chain="A")
++        binder_contig = f"[{monomer_len}-{monomer_len}/0 {target_contig}]"
++        configure_binder_stage(
++            sampler,
++            target_pdb=paths.target_pdb,
++            intermediate_pdb=intermediate_pdb,
++            sketch_json=paths.sketch_json,
++            binder_contig=binder_contig,
++            binder_output_prefix=paths.binder_output_prefix,
++            design_startnum=design_idx,
++            partial_t=args.partial_T,
++            write_trajectory=args.write_trajectory,
++            guide_decay=args.guide_decay,
++            binder_shell_weight=args.binder_shell_weight,
++            binder_distance_weight=args.binder_distance_weight,
++            interface_weight=args.interface_weight,
++            volume_sketch_cutoff=args.volume_sketch_cutoff,
++            volume_sketch_max_sdf=args.volume_sketch_max_sdf,
++            sketch_json_volume_index=args.sketch_json_volume_index,
++        )
++
++        if args.skip_binder_inference:
++            logging.info("Skipping binder stage for %d.", design_idx)
++        else:
++            run_stage(
++                sampler,
++                deterministic=args.deterministic,
++                start_idx=design_idx,
++                num_designs=1,
++                after_sample_init=lambda current_sampler, idx, _prefix: write_binder_volume_sketch_points_if_requested(
++                    current_sampler,
++                    paths,
++                    conf,
++                    idx,
++                ),
++            )
++            if not args.keep_monomer:
++                cleanup_monomer_outputs(
++                    paths.monomer_output_prefix,
++                    design_idx,
++                    remove_trajectory=args.write_trajectory,
++                )
++
++    if shell_xyz is not None:
++        logging.info("Chamfer summary: kept=%d skipped=%d", kept, skipped)
++    logging.info("Two-step inference completed.")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/tests/test_proteinsketch_json.py b/tests/test_proteinsketch_json.py
+new file mode 100644
+index 0000000..445268f
+--- /dev/null
++++ b/tests/test_proteinsketch_json.py
+@@ -0,0 +1,458 @@
++import base64
++import json
++import os
++import tempfile
++import unittest
++from pathlib import Path
++from types import SimpleNamespace
++
++import numpy as np
++from omegaconf import OmegaConf
++
++from rfdiffusion.openvdb_compat import preload_openvdb
++
++preload_openvdb()
++
++from rfdiffusion import volume_sketch
++from rfdiffusion.inference import utils as inference_utils
++
++
++try:
++    import pyopenvdb as _test_vdb
++except ImportError:
++    _test_vdb = None
++
++
++def _make_test_vdb_data(values):
++    if _test_vdb is None:
++        raise unittest.SkipTest("pyopenvdb is unavailable")
++
++    grid = _test_vdb.FloatGrid()
++    grid.name = "test_sdf"
++    for coord, value in values:
++        grid.fill(tuple(coord), tuple(coord), float(value), True)
++
++    fd, tmp_path = tempfile.mkstemp(suffix=".vdb")
++    os.close(fd)
++    try:
++        _test_vdb.write(tmp_path, grids=[grid])
++        return Path(tmp_path).read_bytes()
++    finally:
++        os.unlink(tmp_path)
++
++
++def _pdb_ca(chain: str, residues: int, *, x_offset=0.0):
++    lines = []
++    serial = 1
++    for resseq in range(1, residues + 1):
++        x = float(x_offset + resseq)
++        for atom, y, element in (
++            ("N", 0.0, "N"),
++            ("CA", 1.0, "C"),
++            ("C", 2.0, "C"),
++            ("O", 3.0, "O"),
++        ):
++            lines.append(
++                f"ATOM  {serial:5d}  {atom:<3} GLY {chain}{resseq:4d}    "
++                f"{x:8.3f}{y:8.3f}{0.0:8.3f}  1.00  0.00           {element}"
++            )
++            serial += 1
++    return "\n".join(lines) + "\nEND\n"
++
++
++def _write_json(payload) -> Path:
++    handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
++    json.dump(payload, handle)
++    handle.close()
++    return Path(handle.name)
++
++
++def _volume_item(values, range_pair=(6, 7)):
++    raw = _make_test_vdb_data(values)
++    return {
++        "format": "OpenVDB",
++        "encoding": "base64",
++        "gridName": "test_sdf",
++        "estimatedResidueCountRange": {
++            "min": int(range_pair[0]),
++            "max": int(range_pair[1]),
++        },
++        "data": base64.b64encode(raw).decode("ascii"),
++    }
++
++
++def _write_list_schema_json(*, target_text=None, backbone_text=None, volumes=None):
++    payload = {
++        "format": "ProteinSketchOutput",
++        "schemaVersion": 2,
++        "target": []
++        if target_text is None
++        else [
++            {
++                "format": "PDB",
++                "encoding": "utf-8",
++                "data": target_text,
++                "hotspots": ["A1"],
++            }
++        ],
++        "backbone": []
++        if backbone_text is None
++        else [{"format": "PDB", "encoding": "utf-8", "data": backbone_text}],
++        "volume": [] if volumes is None else volumes,
++    }
++    return _write_json(payload)
++
++
++class ProteinSketchJsonTests(unittest.TestCase):
++    def test_sections_are_lists_not_legacy_objects(self):
++        path = _write_json(
++            {
++                "format": "ProteinSketchOutput",
++                "schemaVersion": 2,
++                "target": [],
++                "backbone": [],
++                "volume": {"format": "OpenVDB", "encoding": "base64", "data": "AA=="},
++            }
++        )
++
++        with self.assertRaisesRegex(ValueError, "must be a list"):
++            volume_sketch.proteinsketch_section_items(path, "volume")
++
++    def test_modes_follow_empty_list_null_semantics(self):
++        target = _pdb_ca("A", 2)
++        backbone = _pdb_ca("A", 3)
++        cases = {
++            "monomer": _write_list_schema_json(volumes=[{"format": "OpenVDB", "encoding": "base64", "data": "AA=="}]),
++            "binder": _write_list_schema_json(
++                target_text=target,
++                volumes=[{"format": "OpenVDB", "encoding": "base64", "data": "AA=="}],
++            ),
++            "monomer_partial": _write_list_schema_json(backbone_text=backbone),
++            "binder_partial": _write_list_schema_json(
++                target_text=target,
++                backbone_text=backbone,
++            ),
++        }
++
++        for expected, path in cases.items():
++            with self.subTest(expected=expected):
++                self.assertEqual(volume_sketch.proteinsketch_mode(path), expected)
++
++    def test_non_vdb_backend_is_rejected(self):
++        with self.assertRaisesRegex(ValueError, "backend='vdb'"):
++            volume_sketch.volume_sketch_points("unused.json", backend="points")
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_vdb_shell_points_use_sdf_band(self):
++        path = _write_list_schema_json(
++            volumes=[
++                _volume_item(
++                    [
++                        ((0, 0, 0), -1.5),
++                        ((1, 0, 0), -0.75),
++                        ((2, 0, 0), 0.0),
++                        ((3, 0, 0), 0.25),
++                    ]
++                )
++            ]
++        )
++
++        points, grids = volume_sketch.volume_sketch_points(path, cutoff=-1.0, max_sdf=0.0)
++
++        self.assertEqual(len(grids), 1)
++        self.assertEqual(grids[0].backend, "vdb")
++        self.assertEqual(points.shape, (2, 3))
++        np.testing.assert_allclose(
++            points.numpy(),
++            np.array([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]], dtype=np.float32),
++            atol=1e-6,
++        )
++        np.testing.assert_allclose(grids[0].shell_sdf, np.array([-0.75, 0.0], dtype=np.float32), atol=1e-6)
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_selected_volume_index_and_length_range(self):
++        path = _write_list_schema_json(
++            volumes=[
++                _volume_item([((0, 0, 0), -0.5)], (4, 5)),
++                _volume_item([((3, 0, 0), -0.5), ((4, 0, 0), 0.0)], (8, 9)),
++            ]
++        )
++
++        points, grids = volume_sketch.volume_sketch_points(
++            path,
++            cutoff=-1.0,
++            max_sdf=0.0,
++            volume_index=1,
++        )
++
++        self.assertEqual(points.shape, (2, 3))
++        np.testing.assert_allclose(
++            points.numpy(),
++            np.array([[3.0, 0.0, 0.0], [4.0, 0.0, 0.0]], dtype=np.float32),
++            atol=1e-6,
++        )
++        self.assertEqual(volume_sketch.proteinsketch_volume_length_range(path, volume_index=1), "8-9")
++        self.assertEqual(grids[0].volume_index, 1)
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_vdb_shell_cache_reuses_raw_samples_across_target_centers(self):
++        path = _write_list_schema_json(
++            volumes=[
++                _volume_item(
++                    [
++                        ((0, 0, 0), -0.5),
++                        ((1, 0, 0), 0.0),
++                    ]
++                )
++            ]
++        )
++        volume_sketch.clear_volume_sketch_cache()
++        original = volume_sketch._vdb_shell_grid
++        calls = []
++
++        def counting_grid(*args, **kwargs):
++            calls.append(1)
++            return original(*args, **kwargs)
++
++        volume_sketch._vdb_shell_grid = counting_grid
++        try:
++            points0, grids0 = volume_sketch.volume_sketch_points(
++                path,
++                cutoff=-1.0,
++                max_sdf=0.0,
++                target_center=np.array([0.0, 0.0, 0.0], dtype=np.float32),
++            )
++            points1, grids1 = volume_sketch.volume_sketch_points(
++                path,
++                cutoff=-1.0,
++                max_sdf=0.0,
++                target_center=np.array([5.0, 0.0, 0.0], dtype=np.float32),
++            )
++        finally:
++            volume_sketch._vdb_shell_grid = original
++            volume_sketch.clear_volume_sketch_cache()
++
++        self.assertEqual(len(calls), 1)
++        np.testing.assert_allclose(points1.numpy(), points0.numpy() - np.array([5.0, 0.0, 0.0]), atol=1e-6)
++        np.testing.assert_allclose(grids1[0].shell_points, grids0[0].shell_points - np.array([5.0, 0.0, 0.0]), atol=1e-6)
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_points_inside_geometries_uses_vdb_sdf(self):
++        path = _write_list_schema_json(
++            volumes=[
++                _volume_item(
++                    [
++                        ((0, 0, 0), -0.5),
++                        ((1, 0, 0), 0.25),
++                    ]
++                )
++            ]
++        )
++        _points, geometries = volume_sketch.volume_sketch_points(path, cutoff=-1.0, max_sdf=0.0)
++
++        inside = volume_sketch.points_inside_geometries(
++            np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32),
++            geometries,
++        )
++
++        np.testing.assert_array_equal(inside, np.array([True, False]))
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_apply_defaults_from_json_modes(self):
++        target_text = _pdb_ca("A", 2, x_offset=10)
++        backbone_text = _pdb_ca("A", 3, x_offset=20)
++        modes = {
++            "monomer": _write_list_schema_json(volumes=[_volume_item([((0, 0, 0), -0.5)], (5, 6))]),
++            "binder": _write_list_schema_json(
++                target_text=target_text,
++                volumes=[_volume_item([((0, 0, 0), -0.5)], (7, 8))],
++            ),
++            "monomer_partial": _write_list_schema_json(backbone_text=backbone_text),
++            "binder_partial": _write_list_schema_json(
++                target_text=target_text,
++                backbone_text=backbone_text,
++                volumes=[_volume_item([((0, 0, 0), -0.5)], (9, 10))],
++            ),
++        }
++
++        for expected_mode, path in modes.items():
++            with self.subTest(expected_mode=expected_mode):
++                conf = OmegaConf.create(
++                    {
++                        "inference": {
++                            "model_runner": "VoxelSampler",
++                            "sketch_json": str(path),
++                            "output_prefix": str(path.with_suffix("")) + "/design",
++                            "input_pdb": None,
++                            "volume_sketch_cutoff": None,
++                            "volume_sketch_max_sdf": 0.0,
++                            "volume_sketch_hotspot": True,
++                        },
++                        "diffuser": {"partial_T": None},
++                        "contigmap": {"contigs": None},
++                        "potentials": {"guiding_potentials": None},
++                        "ppi": {"hotspot_res": None},
++                    }
++                )
++
++                inference_utils.apply_volume_sketch_defaults(conf)
++
++                self.assertEqual(conf.inference.sketch_json_mode, expected_mode)
++                if expected_mode == "monomer":
++                    self.assertEqual(conf.contigmap.contigs, ["5-6"])
++                    self.assertIsNone(conf.inference.input_pdb)
++                    self.assertIsNone(conf.diffuser.partial_T)
++                elif expected_mode == "binder":
++                    self.assertTrue(Path(conf.inference.input_pdb).exists())
++                    self.assertEqual(conf.contigmap.contigs, ["A1-2/0 7-8"])
++                    self.assertEqual(conf.ppi.hotspot_res, ["A1"])
++                    self.assertIsNone(conf.diffuser.partial_T)
++                elif expected_mode == "monomer_partial":
++                    self.assertTrue(Path(conf.inference.input_pdb).exists())
++                    self.assertEqual(conf.contigmap.contigs, ["3-3"])
++                    self.assertEqual(conf.diffuser.partial_T, 10)
++                    self.assertIsNone(conf.potentials.guiding_potentials)
++                elif expected_mode == "binder_partial":
++                    self.assertTrue(Path(conf.inference.input_pdb).exists())
++                    self.assertEqual(conf.contigmap.contigs, ["3-3/0 A1-2"])
++                    self.assertEqual(conf.diffuser.partial_T, 10)
++                    self.assertIn("volume_sketch_binder_shell_ncontacts", conf.potentials.guiding_potentials[0])
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_write_volume_shell_points_pdb(self):
++        path = _write_list_schema_json(volumes=[_volume_item([((0, 0, 0), -0.5)])])
++        points, geometries = volume_sketch.volume_sketch_points(path)
++        output = Path(tempfile.mkdtemp()) / "points.pdb"
++
++        written = volume_sketch.write_volume_shell_points_pdb(output, points, geometries)
++
++        text = written.read_text(encoding="utf-8")
++        self.assertIn("REMARK PROTEINSKETCH_VDB_SHELL_POINTS", text)
++        self.assertIn("HETATM", text)
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_write_volume_sketch_points_also_writes_json_target_pdb(self):
++        path = _write_list_schema_json(
++            target_text=_pdb_ca("A", 2),
++            volumes=[_volume_item([((0, 0, 0), -0.5)])],
++        )
++        outdir = Path(tempfile.mkdtemp())
++        input_pdb = volume_sketch.write_proteinsketch_pdb(
++            path,
++            "target",
++            outdir / "input_target.pdb",
++            chain_id=None,
++            renumber=False,
++        )
++        sampler = SimpleNamespace(
++            inf_conf=SimpleNamespace(
++                write_volume_sketch_points=True,
++                volume_sketch_points_path=str(outdir / "shell_points.pdb"),
++                output_prefix=str(outdir / "design"),
++                sketch_json=str(path),
++                input_pdb=str(input_pdb),
++                volume_sketch_cutoff=-1.0,
++                volume_sketch_max_sdf=0.0,
++                sketch_json_volume_index=0,
++            ),
++            potential_manager=None,
++        )
++
++        written = inference_utils.write_volume_sketch_points_if_requested(sampler)
++        target_path = outdir / f"{path.stem}.pdb"
++
++        self.assertEqual(written, outdir / "shell_points.pdb")
++        self.assertTrue(target_path.exists())
++        self.assertIn("ATOM", target_path.read_text(encoding="utf-8"))
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_written_json_target_pdb_uses_rfdiffusion_centered_frame(self):
++        target_text = _pdb_ca("A", 2, x_offset=10)
++        path = _write_list_schema_json(
++            target_text=target_text,
++            volumes=[_volume_item([((0, 0, 0), -0.5)])],
++        )
++        outdir = Path(tempfile.mkdtemp())
++        input_pdb = volume_sketch.write_proteinsketch_pdb(
++            path,
++            "target",
++            outdir / "input_target.pdb",
++            chain_id=None,
++            renumber=False,
++        )
++        sampler = SimpleNamespace(
++            inf_conf=SimpleNamespace(
++                write_volume_sketch_points=True,
++                volume_sketch_points_path=str(outdir / "shell_points.pdb"),
++                output_prefix=str(outdir / "design"),
++                sketch_json=str(path),
++                input_pdb=str(input_pdb),
++                volume_sketch_cutoff=-1.0,
++                volume_sketch_max_sdf=0.0,
++                sketch_json_volume_index=0,
++            ),
++            potential_manager=None,
++        )
++
++        inference_utils.write_volume_sketch_points_if_requested(sampler)
++        target_path = outdir / f"{path.stem}.pdb"
++        ca_x = [
++            float(line[30:38])
++            for line in target_path.read_text(encoding="utf-8").splitlines()
++            if line.startswith("ATOM") and line[12:16].strip() == "CA"
++        ]
++
++        self.assertEqual(ca_x, [-0.5, 0.5])
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_written_json_target_pdb_prefers_potential_target_frame(self):
++        path = _write_list_schema_json(
++            target_text=_pdb_ca("A", 2, x_offset=10),
++            volumes=[_volume_item([((0, 0, 0), -0.5)])],
++        )
++        outdir = Path(tempfile.mkdtemp())
++        input_pdb = volume_sketch.write_proteinsketch_pdb(
++            path,
++            "target",
++            outdir / "input_target.pdb",
++            chain_id=None,
++            renumber=False,
++        )
++        potential_pdb = outdir / "potential_target.pdb"
++        potential_pdb.write_text(_pdb_ca("A", 3, x_offset=20), encoding="utf-8")
++        points, geometries = volume_sketch.volume_sketch_points(path)
++        sampler = SimpleNamespace(
++            inf_conf=SimpleNamespace(
++                write_volume_sketch_points=True,
++                volume_sketch_points_path=str(outdir / "shell_points.pdb"),
++                output_prefix=str(outdir / "design"),
++                sketch_json=str(path),
++                input_pdb=str(input_pdb),
++                volume_sketch_cutoff=-1.0,
++                volume_sketch_max_sdf=0.0,
++                sketch_json_volume_index=0,
++            ),
++            potential_manager=SimpleNamespace(
++                potentials_to_apply=[
++                    SimpleNamespace(
++                        target_pdb_path=str(potential_pdb),
++                        sketch_points=points,
++                        sketch_geometries=geometries,
++                    )
++                ]
++            ),
++        )
++
++        inference_utils.write_volume_sketch_points_if_requested(sampler)
++        target_path = outdir / f"{path.stem}.pdb"
++        ca_x = [
++            float(line[30:38])
++            for line in target_path.read_text(encoding="utf-8").splitlines()
++            if line.startswith("ATOM") and line[12:16].strip() == "CA"
++        ]
++
++        self.assertEqual(ca_x, [-1.0, 0.0, 1.0])
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tests/test_proteinsketch_two_step.py b/tests/test_proteinsketch_two_step.py
+new file mode 100644
+index 0000000..dcb5a23
+--- /dev/null
++++ b/tests/test_proteinsketch_two_step.py
+@@ -0,0 +1,315 @@
++import base64
++import json
++import os
++import sys
++import tempfile
++import unittest
++from pathlib import Path
++from types import SimpleNamespace
++
++from rfdiffusion.openvdb_compat import preload_openvdb
++
++preload_openvdb()
++
++import torch
++
++from rfdiffusion import volume_sketch
++
++REPO_ROOT = Path(__file__).resolve().parents[1]
++TWO_STEP_DIR = REPO_ROOT / "scripts" / "two-step"
++if str(TWO_STEP_DIR) not in sys.path:
++    sys.path.insert(0, str(TWO_STEP_DIR))
++
++import rfdiffusion_runner
++import run_inference_json_twostep as json_twostep
++from rfdiffusion_runner import configure_binder_stage, configure_monomer_stage
++
++
++try:
++    import pyopenvdb as _test_vdb
++except ImportError:
++    _test_vdb = None
++
++
++def _make_test_vdb_data(values):
++    if _test_vdb is None:
++        raise unittest.SkipTest("pyopenvdb is unavailable")
++
++    grid = _test_vdb.FloatGrid()
++    grid.name = "test_sdf"
++    for coord, value in values:
++        grid.fill(tuple(coord), tuple(coord), float(value), True)
++
++    fd, tmp_path = tempfile.mkstemp(suffix=".vdb")
++    os.close(fd)
++    try:
++        _test_vdb.write(tmp_path, grids=[grid])
++        return Path(tmp_path).read_bytes()
++    finally:
++        os.unlink(tmp_path)
++
++
++def _pdb_ca(chain: str, residues: int):
++    lines = []
++    serial = 1
++    for resseq in range(1, residues + 1):
++        lines.append(
++            f"ATOM  {serial:5d}  CA  GLY {chain}{resseq:4d}    "
++            f"{float(resseq):8.3f}{0.0:8.3f}{0.0:8.3f}  1.00  0.00           C"
++        )
++        serial += 1
++    return "\n".join(lines) + "\nEND\n"
++
++
++def _volume_item(values=None, range_pair=(6, 7)):
++    if values is None:
++        return {
++            "format": "OpenVDB",
++            "encoding": "base64",
++            "estimatedResidueCountRange": {"min": range_pair[0], "max": range_pair[1]},
++            "data": "AA==",
++        }
++    raw = _make_test_vdb_data(values)
++    return {
++        "format": "OpenVDB",
++        "encoding": "base64",
++        "gridName": "test_sdf",
++        "estimatedResidueCountRange": {"min": range_pair[0], "max": range_pair[1]},
++        "data": base64.b64encode(raw).decode("ascii"),
++    }
++
++
++def _write_json(*, target=True, volume=True):
++    payload = {
++        "format": "ProteinSketchOutput",
++        "schemaVersion": 2,
++        "target": []
++        if not target
++        else [
++            {
++                "format": "PDB",
++                "encoding": "utf-8",
++                "data": _pdb_ca("A", 2),
++                "hotspots": ["A1"],
++            }
++        ],
++        "backbone": [],
++        "volume": [] if not volume else [_volume_item()],
++    }
++    handle = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
++    json.dump(payload, handle)
++    handle.close()
++    return Path(handle.name)
++
++
++class DummySampler:
++    def __init__(self):
++        self.inf_conf = SimpleNamespace()
++        self.diffuser_conf = SimpleNamespace()
++        self.contig_conf = SimpleNamespace()
++        self.potential_conf = SimpleNamespace()
++
++
++class ProteinSketchTwoStepTests(unittest.TestCase):
++    def test_stage_configuration_uses_json_volume_potentials(self):
++        sampler = DummySampler()
++
++        configure_monomer_stage(
++            sampler,
++            target_pdb=Path("target.pdb"),
++            sketch_json=Path("sketch.json"),
++            monomer_contig="[6-7]",
++            monomer_output_prefix=Path("outputs/monomer"),
++            num_designs=3,
++            design_startnum=2,
++            write_trajectory=False,
++            guide_decay="linear",
++            monomer_shell_weight=0.2,
++            monomer_distance_weight=0.003,
++            volume_sketch_cutoff=-1.0,
++            volume_sketch_max_sdf=0.0,
++            sketch_json_volume_index=1,
++        )
++
++        self.assertEqual(sampler.inf_conf.sketch_json, "sketch.json")
++        self.assertEqual(sampler.inf_conf.sketch_json_volume_index, 1)
++        self.assertEqual(sampler.contig_conf.contigs, ["6-7"])
++        self.assertEqual(
++            sampler.potential_conf.guiding_potentials,
++            [
++                "type:volume_sketch_monomer_shell_ncontacts,weight:0.2",
++                "type:volume_sketch_shell_nearest_monomer_distance,weight:0.003",
++            ],
++        )
++
++        configure_binder_stage(
++            sampler,
++            target_pdb=Path("target.pdb"),
++            intermediate_pdb=Path("intermediate.pdb"),
++            sketch_json=Path("sketch.json"),
++            binder_contig="[6-6/0 B1-20]",
++            binder_output_prefix=Path("outputs/binder"),
++            design_startnum=2,
++            partial_t=10,
++            write_trajectory=False,
++            guide_decay="linear",
++            binder_shell_weight=0.4,
++            binder_distance_weight=0.005,
++            interface_weight=1.0,
++            volume_sketch_cutoff=-1.0,
++            volume_sketch_max_sdf=0.0,
++            sketch_json_volume_index=1,
++        )
++
++        self.assertEqual(sampler.diffuser_conf.partial_T, 10)
++        self.assertEqual(sampler.contig_conf.contigs, ["6-6/0 B1-20"])
++        self.assertEqual(
++            sampler.potential_conf.guiding_potentials,
++            [
++                "type:volume_sketch_binder_shell_ncontacts,weight:0.4,target_pdb_path:intermediate.pdb",
++                "type:volume_sketch_shell_nearest_binder_distance,weight:0.005,target_pdb_path:intermediate.pdb",
++                "type:interface_ncontacts,weight:1.0",
++            ],
++        )
++
++    def test_json_entrypoint_resolves_hydra_options(self):
++        sketch_json = _write_json()
++        outdir = Path(tempfile.mkdtemp())
++        args = json_twostep.parse_args(
++            [
++                f"inference.sketch_json={sketch_json}",
++                f"inference.output_prefix={outdir / 'binder'}",
++                "inference.num_designs=3",
++                "diffuser.partial_T=12",
++            ]
++        )
++        conf = json_twostep.load_config(args)
++        keys = json_twostep.override_keys(args)
++
++        json_twostep.apply_effective_options(args, conf, keys)
++        json_twostep.validate_args(args)
++        paths = json_twostep.resolve_pipeline_paths(args, conf, keys)
++
++        self.assertEqual(args.monomer_num_designs, 3)
++        self.assertEqual(args.partial_T, 12)
++        self.assertEqual(paths.sketch_json, sketch_json.resolve())
++        self.assertEqual(paths.binder_output_prefix, (outdir / "binder").resolve())
++        self.assertTrue(paths.target_pdb.exists())
++        self.assertEqual(json_twostep.volume_sketch.proteinsketch_volume_length_range(sketch_json), "6-7")
++
++    def test_json_entrypoint_requires_target_and_volume(self):
++        no_target = _write_json(target=False, volume=True)
++        args = json_twostep.parse_args([f"inference.sketch_json={no_target}"])
++        conf = json_twostep.load_config(args)
++        keys = json_twostep.override_keys(args)
++        json_twostep.apply_effective_options(args, conf, keys)
++
++        with self.assertRaisesRegex(ValueError, "target"):
++            json_twostep.validate_args(args)
++
++        no_volume = _write_json(target=True, volume=False)
++        args = json_twostep.parse_args([f"inference.sketch_json={no_volume}"])
++        conf = json_twostep.load_config(args)
++        keys = json_twostep.override_keys(args)
++        json_twostep.apply_effective_options(args, conf, keys)
++
++        with self.assertRaisesRegex(ValueError, "volume"):
++            json_twostep.validate_args(args)
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_shell_points_centering_uses_json_vdb(self):
++        payload_path = _write_json()
++        payload = json.loads(payload_path.read_text(encoding="utf-8"))
++        payload["volume"] = [
++            _volume_item(
++                [
++                    ((4, 0, 0), -0.5),
++                    ((6, 0, 0), 0.0),
++                ]
++            )
++        ]
++        payload_path.write_text(json.dumps(payload), encoding="utf-8")
++        outdir = Path(tempfile.mkdtemp())
++        args = SimpleNamespace(
++            volume_sketch_cutoff=-1.0,
++            volume_sketch_max_sdf=0.0,
++            sketch_json_volume_index=0,
++        )
++        paths = json_twostep.PipelinePaths(
++            config=Path("config"),
++            sketch_json=payload_path,
++            target_pdb=Path("target.pdb"),
++            outpath=outdir,
++            monomer_output_prefix=outdir / "monomer",
++            binder_output_prefix=outdir / "binder",
++            intermediate_dir=outdir / "intermediate",
++        )
++
++        centered = json_twostep.shell_points(args, paths, centered=True)
++        com = json_twostep.compute_shell_com(args, paths)
++
++        self.assertTrue(torch.allclose(centered.mean(dim=0), torch.zeros(3), atol=1e-6))
++        self.assertAlmostEqual(com[0], 5.0, places=6)
++
++    @unittest.skipIf(_test_vdb is None, "pyopenvdb is unavailable")
++    def test_binder_volume_sketch_points_are_per_design(self):
++        sketch_json = _write_json()
++        payload = json.loads(sketch_json.read_text(encoding="utf-8"))
++        payload["volume"] = [_volume_item([((0, 0, 0), -0.5)])]
++        sketch_json.write_text(json.dumps(payload), encoding="utf-8")
++        points, geometries = volume_sketch.volume_sketch_points(sketch_json)
++        outdir = Path(tempfile.mkdtemp())
++        target_pdb = volume_sketch.write_proteinsketch_pdb(
++            sketch_json,
++            "target",
++            outdir / "target.pdb",
++            chain_id=None,
++            renumber=False,
++        )
++        paths = json_twostep.PipelinePaths(
++            config=Path("config"),
++            sketch_json=sketch_json,
++            target_pdb=target_pdb,
++            outpath=outdir,
++            monomer_output_prefix=outdir / "monomer",
++            binder_output_prefix=outdir / "binder",
++            intermediate_dir=outdir / "intermediate",
++        )
++        conf = SimpleNamespace(
++            inference=SimpleNamespace(
++                write_volume_sketch_points=True,
++                volume_sketch_points_path=None,
++            )
++        )
++        sampler = SimpleNamespace(
++            inf_conf=SimpleNamespace(
++                write_volume_sketch_points=False,
++                volume_sketch_points_path=None,
++                output_prefix=str(outdir / "binder"),
++                sketch_json=str(sketch_json),
++            ),
++            potential_manager=SimpleNamespace(
++                potentials_to_apply=[
++                    SimpleNamespace(
++                        sketch_points=points,
++                        sketch_geometries=geometries,
++                        target_pdb_path=str(target_pdb),
++                    )
++                ]
++            ),
++        )
++
++        written = json_twostep.write_binder_volume_sketch_points_if_requested(
++            sampler,
++            paths,
++            conf,
++            7,
++        )
++
++        self.assertEqual(written, outdir / "binder_7_volume_sketch_points.pdb")
++        self.assertIn("PROTEINSKETCH_VDB_SHELL_POINTS", written.read_text(encoding="utf-8"))
++        self.assertTrue((outdir / f"{sketch_json.stem}.pdb").exists())
++
++
++if __name__ == "__main__":
++    unittest.main()
