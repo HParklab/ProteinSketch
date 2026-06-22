@@ -1,11 +1,10 @@
-# PX RFdiffusion JSON VDB Patch
+# ProteinSketch RFdiffusion Patch
 
 <p align="center">
-  <img src="figs/main_figure.png" alt="PX RFdiffusion overview" width="100%">
+  <img src="figs/main_figure.png" alt="ProteinSketch RFdiffusion volume-conditioning overview" width="100%">
 </p>
 
-Patch-only PX additions for official RFdiffusion. This branch uses ProteinSketch
-JSON input with embedded OpenVDB SDF volume data.
+RFdiffusion patch for ProteinSketch, a VR-assisted protein design workflow that turns user-sketched backbone topologies and volumetric envelopes into diffusion-ready spatial constraints for de novo monomer and binder design. This repository adds ProteinSketch JSON input, embedded OpenVDB SDF volume support, volume-guided potentials, and partial-diffusion refinement utilities to the official RFdiffusion codebase.
 
 Base RFdiffusion commit:
 
@@ -43,10 +42,11 @@ git apply --whitespace=nowarn --check /tmp/px-rfdiffusion.patch
 git apply --whitespace=nowarn /tmp/px-rfdiffusion.patch
 ```
 
-## ProteinSketch JSON input
+## ProteinSketch JSON/OpenVDB input
 
-Use `inference.sketch_json` to point RFdiffusion at a ProteinSketch JSON file.
-JSON file looks like:
+Use `inference.sketch_json` to point RFdiffusion at a ProteinSketch JSON file
+that may contain a target PDB, a sketched backbone, and/or an embedded OpenVDB
+SDF volume. JSON file looks like:
 
 ```json
 {
@@ -86,7 +86,7 @@ example file contains multiple volume entries, treat them as independent
 examples; the default uses `volume[0]`, and `inference.sketch_json_volume_index`
 can select another entry.
 
-Mode is inferred from populated sections:
+Design mode is inferred from populated sections:
 
 ```text
 # [] means empty. e.g., above JSON's backbone is empty
@@ -96,7 +96,7 @@ target=[]  backbone!=[]             -> monomer partial diffusion without volume 
 target!=[] backbone!=[]             -> binder partial diffusion without volume potential
 ```
 
-## Unified schema for monomer/binder design
+## Unified schema for monomer and binder design
 
 As described above, `.json` defines which design to run (monomer or binder).
 
@@ -149,7 +149,8 @@ RFdiffusion checkout and `SKETCH_JSON` to a ProteinSketch JSON file.
 
 ## T=2 refinement (partial diffusion)
 
-Even though you don't particularly need additional config to run partial diffusion, we implemented the T=2 refinement.
+ProteinSketch supports T=2 RFdiffusion partial diffusion for fast backbone
+regularization of sketch-derived inputs.
 
 ```bash
 python scripts/run_inference.py \
