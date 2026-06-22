@@ -182,7 +182,7 @@ python scripts/two-step/run_inference_json_twostep.py \
   inference.num_designs=2
 ```
 
-The first stage samples binder-like monomer backbones under the sketched volume potential. The generated backbones are then transformed back into the original target coordinate frame and combined with the target PDB from the JSON input. The second stage runs partial diffusion on the target-frame complex to refine the binder while preserving the target placement.
+The first stage samples monomer backbones under the sketched volume potential. The generated backbones are then transformed and combined with the target PDB from the JSON input. The second stage runs partial diffusion on the monomer-target complex to design the binder.
 
 ## Partial diffusion for sketch refinement
 
@@ -194,7 +194,7 @@ python scripts/run_inference.py \
   inference.input_pdb=/path/to/input.pdb
 ```
 
-The `oneshot` configuration is intended for fast partial-diffusion refinement of sketch-derived structures.
+The `oneshot` configuration is intended for fast partial-diffusion refinement of sketch-derived structures (you can do this with the original RFdiffusion, too).
 
 ## Examples
 
