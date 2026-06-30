@@ -212,6 +212,7 @@ These examples show how to:
 - change the VDB SDF shell band with `inference.volume_sketch_cutoff`
 - select a volume entry with `inference.sketch_input_volume_index`
 - override monomer and binder volume-potential weights
+- override volume-potential parameters such as `d_0`, `r_0`, and `min_dist`
 - override interface weights for binder design
 - manually override inferred `contigmap.contigs`
 
