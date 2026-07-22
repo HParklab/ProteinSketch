@@ -1,7 +1,7 @@
 # Protein*Sketch*
 
 <p align="center">
-  <img src="figs/main_figure.png" alt="ProteinSketch overview" width="1100px" align="middle"/>
+  <img src="figs/thumbnail.png" alt="ProteinSketch overview" width="1100px" align="middle"/>
 </p>
 
 ## Description
